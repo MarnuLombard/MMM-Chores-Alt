@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+base=~/MagicMirror
+
+if [[ ! -d "$base" ]]; then
+  echo "MagicMirror directory not found at $base."
+  exit 0;
+fi
+
+"$base/node_modules/.bin/electron-rebuild"

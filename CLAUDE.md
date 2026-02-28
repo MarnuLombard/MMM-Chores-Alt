@@ -96,8 +96,6 @@ MMM-Chores-Alt/
     magicmirror-sdk.md  ← Full SDK reference (see below)
 ```
 
-Phase 2 scaffolding complete. All template files renamed and replaced.
-
 ---
 
 ## Tech Stack
