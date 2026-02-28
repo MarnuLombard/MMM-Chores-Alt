@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+[GitHub url].git"
+    "url": "git+https://github.com/MarnuLombard/MMM-Chores-Alt.git"
   },
   "keywords": [
     "magicmirror",
@@ -20,9 +20,9 @@
   "author": "[Author]",
   "license": "MIT",
   "bugs": {
-    "url": "[GitHub url]/issues"
+    "url": "https://github.com/MarnuLombard/MMM-Chores-Alt/issues"
   },
-  "homepage": "[GitHub url]#readme",
+  "homepage": "https://github.com/MarnuLombard/MMM-Chores-Alt#readme",
   "dependencies": {
     "better-sqlite3": "^11.0.0",
     "node-cron": "^3.0.0"

@@ -107,3 +107,4 @@ dist
 chores.db
 chores.db-wal
 chores.db-shm
+/.claude/settings.local.json
