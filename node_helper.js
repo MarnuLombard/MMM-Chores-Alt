@@ -137,7 +137,7 @@ module.exports = NodeHelper.create({
     }
 
     const redeemedRow = this.stmts.getRedeemedTotal.get(childId)
-    return totalEarned - redeemedRow.total
+    return Math.max(0, totalEarned - redeemedRow.total)
   },
 
   sendState() {
