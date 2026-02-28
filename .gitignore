@@ -102,3 +102,8 @@ dist
 
 # TernJS port file
 .tern-port
+
+# SQLite database
+chores.db
+chores.db-wal
+chores.db-shm

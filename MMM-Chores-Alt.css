@@ -1,0 +1,268 @@
+/* ── Custom properties ──────────────────────────────────────────────────────
+   Target: 1920×1080, 2 children, 5 chores each.
+   Override in MagicMirror config.js if deploying on a different screen size.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --chores-button-height: 160px;
+  --chores-icon-size: 80px;
+  --chores-label-size: 24px;
+  --chores-panel-gap: 16px;
+  --chores-completed-opacity: 0.4;
+}
+
+/* ── Module root ────────────────────────────────────────────────────────── */
+.MMM-Chores-Alt {
+  width: 100%;
+}
+
+/* ── Panel layout (one flex column per child, side by side) ─────────────── */
+.chores-panels {
+  display: flex;
+  gap: var(--chores-panel-gap);
+  width: 100%;
+}
+
+.child-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #555;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ── Loading placeholder ────────────────────────────────────────────────── */
+.chores-loading {
+  text-align: center;
+  padding: 2em;
+}
+
+/* ── Child header ───────────────────────────────────────────────────────── */
+.child-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  padding: 0 16px;
+  font-size: 32px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.child-name {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* ── Chore list ─────────────────────────────────────────────────────────── */
+.chore-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  flex: 1;
+}
+
+/* ── Chore button ───────────────────────────────────────────────────────── */
+.chore-button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--chores-button-height);
+  padding: 12px 8px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: opacity 0.2s ease, background 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.chore-button:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Chore icon ─────────────────────────────────────────────────────────── */
+.chore-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+span.chore-icon {
+  font-size: var(--chores-icon-size);
+  line-height: 1;
+}
+
+img.chore-icon {
+  width: var(--chores-icon-size);
+  height: var(--chores-icon-size);
+  object-fit: contain;
+}
+
+/* ── Chore label ────────────────────────────────────────────────────────── */
+.chore-label {
+  margin-top: 4px;
+  font-size: var(--chores-label-size);
+  color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+}
+
+/* ── Completed state ────────────────────────────────────────────────────── */
+.chore-button.done {
+  opacity: var(--chores-completed-opacity);
+}
+
+.chore-done-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 32px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* ── Tally row ──────────────────────────────────────────────────────────── */
+.child-tally {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 60px;
+  padding: 0 16px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.tally-value {
+  font-size: 28px;
+  min-width: 3ch;
+  text-align: center;
+}
+
+/* ── Redeem button ──────────────────────────────────────────────────────── */
+.redeem-button {
+  margin-left: auto;
+  padding: 8px 20px;
+  font-size: 18px;
+  font-weight: bold;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.redeem-button:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ── PIN modal overlay ──────────────────────────────────────────────────── */
+.pin-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.pin-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 40px;
+  background: #1a1a2e;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  min-width: 360px;
+}
+
+.pin-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+}
+
+.pin-display {
+  font-size: 48px;
+  letter-spacing: 12px;
+  color: #fff;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin-error {
+  font-size: 20px;
+  color: #ff4444;
+  min-height: 28px;
+  text-align: center;
+}
+
+/* ── PIN keypad ─────────────────────────────────────────────────────────── */
+.pin-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.pin-key {
+  width: 80px;
+  height: 80px;
+  font-size: 32px;
+  font-weight: bold;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.pin-key:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.pin-key-ok {
+  background: rgba(76, 175, 80, 0.3);
+  border-color: rgba(76, 175, 80, 0.5);
+}
+
+.pin-key-ok:active {
+  background: rgba(76, 175, 80, 0.6);
+}
+
+.pin-cancel {
+  margin-top: 8px;
+  padding: 12px 40px;
+  font-size: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 68, 68, 0.2);
+  color: #fff;
+  cursor: pointer;
+}
+
+.pin-cancel:active {
+  background: rgba(255, 68, 68, 0.5);
+}

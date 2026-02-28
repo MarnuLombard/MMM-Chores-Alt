@@ -1,84 +1,107 @@
-# MMM-Template
-Use this template for creating new MagicMirror² modules.
+# MMM-Chores-Alt
 
-See the [wiki page](https://github.com/Dennis-Rosenbaum/MMM-Template/wiki) for an in depth overview of how to get started.
-
-# MMM-Template
-
-*MMM-Template* is a module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror) that displays ... [Module description]
-
-## Screenshot
-
-![Example of MMM-Template](./example_1.png)
+*MMM-Chores-Alt* is a module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror)
+that lets children track their daily chores on a touchscreen. Each child gets a panel
+with large tap buttons (supporting emoji or images for pre-reading-age children), a live
+point tally, and a parent-PIN-protected redemption flow.
 
 ## Installation
 
 ### Install
 
-In your terminal, go to the modules directory and clone the repository:
-
 ```bash
 cd ~/MagicMirror/modules
-git clone [GitHub url]
+git clone [GitHub url] MMM-Chores-Alt
+cd MMM-Chores-Alt
+npm install
+npx @electron/rebuild   # required for better-sqlite3 native bindings
 ```
 
 ### Update
 
-Go to the module directory and pull the latest changes:
-
 ```bash
-cd ~/MagicMirror/modules/MMM-Template
+cd ~/MagicMirror/modules/MMM-Chores-Alt
 git pull
+npm install
+npx @electron/rebuild
 ```
 
 ## Configuration
 
-To use this module, you have to add a configuration object to the modules array in the `config/config.js` file.
-
-### Example configuration
-
-Minimal configuration to use the module:
+Add the module to the `modules` array in `config/config.js`:
 
 ```js
-    {
-        module: 'MMM-Template',
-        position: 'lower_third'
-    },
+{
+  'module': "MMM-Chores-Alt",
+  position: "fullscreen_below",
+  config: {
+    parentPin: "1234",
+    children: [
+      {
+        id: "child1",
+        name: "Alice",
+        color: "#ff6b6b",
+        chores: [
+          { id: "make-bed",    label: "Make Bed",    icon: "🛏️", points: 1 },
+          { id: "brush-teeth", label: "Brush Teeth", icon: "🦷", points: 1 },
+          { id: "get-dressed", label: "Get Dressed", icon: "👕", points: 1 },
+          { id: "tidy-room",   label: "Tidy Room",   icon: "🧹", points: 2 },
+          { id: "homework",    label: "Homework",    icon: "📚", points: 3 },
+        ]
+      },
+      {
+        id: "child2",
+        name: "Bob",
+        color: "#4ecdc4",
+        chores: [
+          { id: "make-bed",    label: "Make Bed",    icon: "🛏️", points: 1 },
+          // Local image path (relative to MagicMirror root)
+          { id: "brush-teeth",  label: "Brush Teeth",  icon: "/modules/MMM-Chores-Alt/icons/teeth.png", points: 1 }, 
+          // External/absolute URL
+          { id: "tidy-room",    label: "Tidy Room",    icon: "https://example.com/icons/room.png",       points: 1 },
+          { id: "tidy-room",   label: "Tidy Room",   icon: "🧹", points: 2 },
+          { id: "homework",    label: "Homework",    icon: "📚", points: 3 },
+        ]
+      }
+    ]
+  }
+}
 ```
 
-Configuration with all options:
+## Configuration options
 
-```js
-    {
-        module: 'MMM-Template',
-        position: 'lower_third',
-        config: {
-            exampleContent: 'Welcome world'
-        }
-    },
-```
+| Option      | Type   | Default  | Description                              |
+|-------------|--------|----------|------------------------------------------|
+| `children`  | Array  | `[]`     | List of child objects (see schema below) |
+| `parentPin` | String | `"0000"` | PIN required to redeem a child's tally   |
 
-### Configuration options
+### Child object schema
 
-Option|Possible values|Default|Description
-------|------|------|-----------
-`exampleContent`|`string`|not available|The content to show on the page
+| Field    | Type   | Required | Description           |
+|----------|--------|----------|-----------------------|
+| `id`     | String | Yes      | Unique identifier     |
+| `name`   | String | Yes      | Display name          |
+| `color`  | String | No       | Accent colour (hex)   |
+| `chores` | Array  | Yes      | List of chore objects |
 
-## Sending notifications to the module
+### Chore object schema
 
-Notification|Description
-------|-----------
-`TEMPLATE_RANDOM_TEXT`|Payload must contain the text that needs to be shown on this module
+| Field    | Type   | Required | Description                                                                              |
+|----------|--------|----------|------------------------------------------------------------------------------------------|
+| `id`     | String | Yes      | Unique identifier within the child's list                                                |
+| `icon`   | String | Yes      | Emoji string **or** image path/URL — paths containing `/` or `.` are rendered as `<img>` |
+| `label`  | String | No       | Text shown below the icon (omit if icon is self-explanatory)                             |
+| `points` | Number | Yes      | Points awarded on completion                                                             |
 
 ## Developer commands
 
-- `npm install` - Install devDependencies like ESLint.
-- `node --run lint` - Run linting and formatter checks.
-- `node --run lint:fix` - Fix linting and formatter issues.
+- `npm install` — install dependencies
+- `node --run lint` — run linting and formatter checks
+- `node --run lint:fix` — fix linting and formatter issues
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE.md) file for details.
 
 ## Changelog
 

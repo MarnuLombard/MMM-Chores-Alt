@@ -1,8 +1,8 @@
 {
-  "name": "mmm-template",
+  "name": "mmm-chores-alt",
   "version": "1.0.0",
-  "description": "[Module description]",
-  "main": "MMM-Template.js",
+  "description": "MagicMirror² module for tracking children's daily chores",
+  "main": "MMM-Chores-Alt.js",
   "scripts": {
     "lint": "eslint",
     "lint:fix": "eslint --fix",
@@ -13,7 +13,9 @@
     "url": "git+[GitHub url].git"
   },
   "keywords": [
-    "template"
+    "magicmirror",
+    "chores",
+    "kids"
   ],
   "author": "[Author]",
   "license": "MIT",
@@ -21,6 +23,10 @@
     "url": "[GitHub url]/issues"
   },
   "homepage": "[GitHub url]#readme",
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "node-cron": "^3.0.0"
+  },
   "devDependencies": {
     "@eslint/css": "^0.9.0",
     "@eslint/js": "^9.30.1",
