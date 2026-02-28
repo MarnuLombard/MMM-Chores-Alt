@@ -3,10 +3,10 @@
    Override in MagicMirror config.js if deploying on a different screen size.
    ────────────────────────────────────────────────────────────────────────── */
 :root {
-  --chores-button-height: 160px;
-  --chores-icon-size: 80px;
-  --chores-label-size: 24px;
-  --chores-panel-gap: 16px;
+  --chores-row-height: 160px;
+  --chores-icon-size: 64px;
+  --chores-button-gap: 8px;
+  --chores-section-gap: 16px;
   --chores-completed-opacity: 0.4;
 }
 
@@ -15,21 +15,37 @@
   width: 100%;
 }
 
-/* ── Panel layout (one flex column per child, side by side) ─────────────── */
-.chores-panels {
+/* ── Single horizontal row ──────────────────────────────────────────────── */
+.chores-row {
   display: flex;
-  gap: var(--chores-panel-gap);
+  align-items: stretch;
+  max-height: var(--chores-row-height);
   width: 100%;
-}
-
-.child-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border: 2px solid #555;
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ── Child section (name + chores + tally, inline) ──────────────────────── */
+.child-section {
+  display: flex;
+  align-items: center;
+  gap: var(--chores-button-gap);
+  flex: 1;
+  padding: 8px 12px;
+}
+
+.child-section + .child-section {
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.child-name {
+  font-size: 24px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 /* ── Loading placeholder ────────────────────────────────────────────────── */
@@ -38,49 +54,22 @@
   padding: 2em;
 }
 
-/* ── Child header ───────────────────────────────────────────────────────── */
-.child-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 80px;
-  padding: 0 16px;
-  font-size: 32px;
-  font-weight: bold;
-  color: #fff;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.child-name {
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-/* ── Chore list ─────────────────────────────────────────────────────────── */
-.chore-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  flex: 1;
-}
-
 /* ── Chore button ───────────────────────────────────────────────────────── */
 .chore-button {
   position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: var(--chores-button-height);
-  padding: 12px 8px;
+  width: var(--chores-icon-size);
+  height: var(--chores-icon-size);
+  min-width: var(--chores-icon-size);
+  padding: 8px;
   border: 2px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
   cursor: pointer;
   transition: opacity 0.2s ease, background 0.15s ease;
-  width: 100%;
-  box-sizing: border-box;
+  box-sizing: content-box;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -90,12 +79,6 @@
 }
 
 /* ── Chore icon ─────────────────────────────────────────────────────────── */
-.chore-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 span.chore-icon {
   font-size: var(--chores-icon-size);
   line-height: 1;
@@ -107,14 +90,6 @@ img.chore-icon {
   object-fit: contain;
 }
 
-/* ── Chore label ────────────────────────────────────────────────────────── */
-.chore-label {
-  margin-top: 4px;
-  font-size: var(--chores-label-size);
-  color: rgba(255, 255, 255, 0.85);
-  text-align: center;
-}
-
 /* ── Completed state ────────────────────────────────────────────────────── */
 .chore-button.done {
   opacity: var(--chores-completed-opacity);
@@ -122,43 +97,34 @@ img.chore-icon {
 
 .chore-done-badge {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 32px;
+  top: -4px;
+  right: -4px;
+  font-size: 20px;
   line-height: 1;
   pointer-events: none;
 }
 
-/* ── Tally row ──────────────────────────────────────────────────────────── */
+/* ── Tally ──────────────────────────────────────────────────────────────── */
 .child-tally {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  height: 60px;
-  padding: 0 16px;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: bold;
   color: #fff;
-}
-
-.tally-value {
-  font-size: 28px;
-  min-width: 3ch;
-  text-align: center;
+  white-space: nowrap;
+  margin-left: auto;
+  padding: 0 8px;
 }
 
 /* ── Redeem button ──────────────────────────────────────────────────────── */
 .redeem-button {
-  margin-left: auto;
-  padding: 8px 20px;
-  font-size: 18px;
+  padding: 8px 16px;
+  font-size: 16px;
   font-weight: bold;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   cursor: pointer;
+  white-space: nowrap;
   transition: background 0.15s ease;
 }
 

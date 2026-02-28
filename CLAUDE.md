@@ -33,8 +33,9 @@ otherwise render as a text node (emoji or plain text).
 `label` is optional; omit it if the icon is self-explanatory for the child.
 
 ### Display
-- One panel per child: name, chore list (large tap buttons), cumulative tally
-- Completed chores are visually distinct (e.g. greyed out + checkmark overlay)
+- Single horizontal strip across the screen, max 160px tall
+- Grouped sections: each child's name, chore buttons, and tally sit inline in one row
+- Completed chores are visually distinct (greyed out + checkmark overlay)
 - Buttons are large enough for young children — see UI/Layout Spec below
 
 ### Interaction (touchscreen)
@@ -57,26 +58,30 @@ otherwise render as a text node (emoji or plain text).
 
 **Target display:** 1920×1080, 2 children, 5 chores each, touchscreen.
 
-**Panel layout** (2 panels side by side, full width):
-- Each panel: ~940px wide × ~980px tall (accounting for MM chrome/padding)
-- Panel header (child name + avatar): ~80px tall
-- Tally row: ~60px tall
-- Chore area: remaining ~840px ÷ 5 chores = **~168px per chore button**
+**Layout** (single horizontal strip, full width, max 160px tall):
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Alice  🛏️  🦷  👕  🧹  📚  15pts │ Bob  🛏️  🦷  👕  🧹  📚  8pts │
+└─────────────────────────────────────────────────────────────────┘
+```
+- One flex row containing grouped sections (one per child)
+- Each section: child name (colored), chore buttons (inline), tally + redeem
+- Sections separated by a subtle divider; child colour used as accent
 
 **Chore button sizing targets:**
-- Min height: `120px` (hard floor); target `~160px`
-- Icon/emoji: `80px` font-size for emoji; `80×80px` for `<img>`
-- Label text (if present): `24px`, below the icon, optional display
+- Max row height: `160px`; buttons fill available height
+- Icon/emoji: `64px` font-size for emoji; `64×64px` for `<img>`
+- Label text hidden by default (space constrained); shown on hover/focus if present
 - Touch target must cover the full button area (no small click zone)
 
 **CSS sizing approach:** Use CSS custom properties so values can be overridden
 via the `config` object if the module is deployed on a different screen:
 ```css
 :root {
-  --chores-button-height: 160px;
-  --chores-icon-size: 80px;
-  --chores-label-size: 24px;
-  --chores-panel-gap: 16px;
+  --chores-row-height: 160px;
+  --chores-icon-size: 64px;
+  --chores-button-gap: 8px;
+  --chores-section-gap: 16px;
 }
 ```
 

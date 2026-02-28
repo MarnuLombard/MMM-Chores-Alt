@@ -47,12 +47,12 @@ Module.register("MMM-Chores-Alt", {
       return wrapper
     }
 
-    const panels = document.createElement("div")
-    panels.className = "chores-panels"
+    const row = document.createElement("div")
+    row.className = "chores-row"
     for (const child of this.state.children) {
-      panels.appendChild(this.renderChildPanel(child))
+      row.appendChild(this.renderChildSection(child))
     }
-    wrapper.appendChild(panels)
+    wrapper.appendChild(row)
 
     if (this.pinChildId) {
       wrapper.appendChild(this.renderPinModal())
@@ -61,52 +61,32 @@ Module.register("MMM-Chores-Alt", {
     return wrapper
   },
 
-  // ── Child panel ─────────────────────────────────────────────────────────
+  // ── Child section (inline: name → chore buttons → tally) ───────────────
 
-  renderChildPanel(child) {
-    const panel = document.createElement("div")
-    panel.className = "child-panel"
-    panel.dataset.childId = child.id
-    if (child.color) {
-      panel.style.borderColor = child.color
-    }
+  renderChildSection(child) {
+    const section = document.createElement("div")
+    section.className = "child-section"
+    section.dataset.childId = child.id
 
-    // Header
-    const header = document.createElement("div")
-    header.className = "child-header"
-    if (child.color) {
-      header.style.backgroundColor = child.color
-    }
+    // Child name
     const nameEl = document.createElement("span")
     nameEl.className = "child-name"
-    nameEl.textContent = child.name
-    header.appendChild(nameEl)
-    panel.appendChild(header)
-
-    // Chore list
-    const choreList = document.createElement("div")
-    choreList.className = "chore-list"
-    for (const chore of child.chores) {
-      choreList.appendChild(this.renderChoreButton(child.id, chore))
-    }
-    panel.appendChild(choreList)
-
-    // Tally row
-    const tallyRow = document.createElement("div")
-    tallyRow.className = "child-tally"
     if (child.color) {
-      tallyRow.style.backgroundColor = child.color
+      nameEl.style.color = child.color
+    }
+    nameEl.textContent = child.name
+    section.appendChild(nameEl)
+
+    // Chore buttons (inline)
+    for (const chore of child.chores) {
+      section.appendChild(this.renderChoreButton(child.id, chore))
     }
 
-    const tallyLabel = document.createElement("span")
-    tallyLabel.className = "tally-label"
-    tallyLabel.textContent = "Points: "
-    tallyRow.appendChild(tallyLabel)
-
-    const tallyValue = document.createElement("span")
-    tallyValue.className = "tally-value"
-    tallyValue.textContent = child.tally
-    tallyRow.appendChild(tallyValue)
+    // Tally
+    const tally = document.createElement("span")
+    tally.className = "child-tally"
+    tally.textContent = `${child.tally}pts`
+    section.appendChild(tally)
 
     // Redeem button
     const redeemBtn = document.createElement("button")
@@ -116,10 +96,9 @@ Module.register("MMM-Chores-Alt", {
       e.stopPropagation()
       this.openPinModal(child.id)
     })
-    tallyRow.appendChild(redeemBtn)
+    section.appendChild(redeemBtn)
 
-    panel.appendChild(tallyRow)
-    return panel
+    return section
   },
 
   // ── Chore button ────────────────────────────────────────────────────────
@@ -130,29 +109,17 @@ Module.register("MMM-Chores-Alt", {
     btn.dataset.choreId = chore.id
 
     // Icon
-    const iconWrap = document.createElement("div")
-    iconWrap.className = "chore-icon-wrap"
-
     if (chore.icon && (chore.icon.includes("/") || chore.icon.includes("."))) {
       const img = document.createElement("img")
       img.className = "chore-icon"
       img.src = chore.icon
       img.alt = chore.label || chore.id
-      iconWrap.appendChild(img)
+      btn.appendChild(img)
     } else {
       const emoji = document.createElement("span")
       emoji.className = "chore-icon"
       emoji.textContent = chore.icon || ""
-      iconWrap.appendChild(emoji)
-    }
-    btn.appendChild(iconWrap)
-
-    // Label (optional)
-    if (chore.label) {
-      const label = document.createElement("div")
-      label.className = "chore-label"
-      label.textContent = chore.label
-      btn.appendChild(label)
+      btn.appendChild(emoji)
     }
 
     // Done badge
