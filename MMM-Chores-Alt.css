@@ -82,6 +82,7 @@
 span.chore-icon {
   font-size: var(--chores-icon-size);
   line-height: 1;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
 }
 
 img.chore-icon {
