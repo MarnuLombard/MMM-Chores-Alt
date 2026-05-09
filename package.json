@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/MarnuLombard/MMM-Chores-Alt#readme",
   "dependencies": {
+    "@electron/rebuild": "^4.0.4",
     "better-sqlite3": "^12.6.2",
     "node-cron": "^3.0.0"
   },
