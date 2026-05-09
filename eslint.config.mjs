@@ -6,7 +6,15 @@ import markdown from "@eslint/markdown"
 import stylistic from "@stylistic/eslint-plugin"
 
 export default defineConfig([
-  { files: ["**/*.css"], plugins: { css }, language: "css/css", extends: ["css/recommended"] },
+  {
+    files: ["**/*.css"],
+    plugins: { css },
+    language: "css/css",
+    extends: ["css/recommended"],
+    rules: {
+      "css/use-baseline": "off",
+    },
+  },
   {
     files: ["**/*.js", "**/*.mjs"],
     languageOptions: {
