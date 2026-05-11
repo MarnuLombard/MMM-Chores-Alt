@@ -94,22 +94,39 @@ button (child must be able to un-tap).
 
 ```text
 MMM-Chores-Alt/
-  MMM-Chores-Alt.js   ← MagicMirror frontend module (browser)
-  node_helper.js      ← Node.js backend: SQLite, cron, socket handler
-  MMM-Chores-Alt.css  ← Styles
+  MMM-Chores-Alt.js          ← built frontend (UMD; committed)
+  MMM-Chores-Alt.js.map      ← source-map (committed)
+  node_helper.js             ← built backend (CJS; committed)
+  node_helper.js.map         ← source-map (committed)
+  MMM-Chores-Alt.css         ← styles
+  src/
+    frontend/  Frontend.ts (entry), render, stateDiff, stateReactor,
+               pin, delight, icon
+    backend/   index.ts (entry), Backend, repository, tally, stateBuilder,
+               dateUtils
+    constants/ SocketNotifications
+    types/     Config, State, Domain, Effects
+  __tests__/unit/{frontend,backend}/
+  __mocks__/   logger, node_helper, Module
   docs/
-    magicmirror-sdk.md  ← Full SDK reference (see below)
+    magicmirror-sdk.md
+    features/typescript-conversion.spec.md
 ```
+
+Source lives in `src/`; the committed `MMM-Chores-Alt.js` and `node_helper.js`
+are build artefacts - run `npm run build` after source changes.
 
 ---
 
 ## Tech Stack
 
-- **MagicMirror² module SDK** — `Module.register()`, `NodeHelper.create()`
-- **better-sqlite3** — synchronous SQLite for node_helper
-- **node-cron** (or `node-schedule`) — midnight daily reset job
-- **Vanilla JS / DOM** — frontend rendering via `getDom()`, no framework
-- No frontend build step; plain JS runs directly in Electron/browser
+- **MagicMirror² module SDK** - `Module.register()`, `NodeHelper.create()`
+- **TypeScript** compiled by Vite to UMD (frontend) and CJS (backend); strict
+  types from `src/types/`
+- **Vitest** + happy-dom for unit tests in `__tests__/unit/`
+- **better-sqlite3** - synchronous SQLite for the backend
+- **node-cron** - midnight daily reset job
+- Frontend rendering via `getDom()`; no UI framework
 
 ---
 
@@ -163,6 +180,27 @@ via `sendSocketNotification("INIT", this.config)` in `start()`.
 One node_helper instance serves **all** instances of the module type.
 
 ---
+
+## Testing
+
+- Run via `npm test` (Vitest, `happy-dom` environment).
+- `repository.test.ts` uses real in-memory SQLite (`new ChoresRepository(':memory:')`),
+  not a mock. `Backend.test.ts` exercises the same in-memory repository through
+  `createBackendSpec`; only `sendSocketNotification` is mocked.
+- `__tests__/setup.ts` stubs `AudioContext`, `Log`, and `Module` globals before
+  any source import.
+- No coverage tooling and no thresholds - intentional.
+
+## Build & Install
+
+- `npm install` triggers `postinstall` -> `@electron/rebuild` against
+  MagicMirror's pinned Electron. The script exits 0 with a warning when run
+  outside a MagicMirror parent (standalone clone for tests).
+- `.npmrc` sets `optional=true` so the lockfile lists all platform variants of
+  optional deps. Use `npm install`, not `npm ci --omit=optional`.
+- `npm run build` runs Vite twice: frontend (UMD, externalises `logger`) then
+  backend (CJS, externalises `better-sqlite3`, `node-cron`, `node_helper`,
+  `logger`, `path`, `fs`).
 
 ## Full SDK Reference
 

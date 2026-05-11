@@ -14,8 +14,11 @@ cd ~/MagicMirror/modules
 git clone [GitHub url] MMM-Chores-Alt
 cd MMM-Chores-Alt
 npm install
-npx @electron/rebuild   # required for better-sqlite3 native bindings
 ```
+
+The `postinstall` hook runs `@electron/rebuild` against MagicMirror's pinned
+Electron version so `better-sqlite3` works on the host. Use `npm install` (not
+`npm ci --omit=optional`) to allow native rebuilds on each target platform.
 
 ### Update
 
@@ -23,7 +26,6 @@ npx @electron/rebuild   # required for better-sqlite3 native bindings
 cd ~/MagicMirror/modules/MMM-Chores-Alt
 git pull
 npm install
-npx @electron/rebuild
 ```
 
 ## Configuration
@@ -93,11 +95,36 @@ Add the module to the `modules` array in `config/config.js`:
 | `label`  | String | No       | Text shown below the icon (omit if icon is self-explanatory)                             |
 | `points` | Number | Yes      | Points awarded on completion                                                             |
 
-## Developer commands
+## Development
 
-- `npm install` — install dependencies
-- `node --run lint` — run linting and formatter checks
-- `node --run lint:fix` — fix linting and formatter issues
+Source lives in `src/` (TypeScript, strict). Build artefacts (`MMM-Chores-Alt.js`,
+`node_helper.js`, and their `.js.map` siblings) are committed at the repo root so
+MagicMirror loads them directly - do not hand-edit them.
+
+- `npm install` - install dependencies (triggers `@electron/rebuild`)
+- `npm run build` - build both frontend (UMD) and backend (CJS) artefacts
+- `npm run dev` - watch-mode build
+- `npm test` - run Vitest unit tests
+- `npm run test:watch` - watch-mode tests
+- `npm run lint` / `npm run lint:fix` - ESLint
+
+No CI workflows, no Husky, no Prettier - ESLint is the sole style enforcer.
+
+### Project layout
+
+```text
+src/
+  frontend/    Frontend.ts (entry), render, stateDiff, stateReactor,
+               pin, delight, icon
+  backend/     index.ts (entry), Backend, repository, tally, stateBuilder,
+               dateUtils
+  constants/   SocketNotifications
+  types/       Config, State, Domain, Effects
+__tests__/unit/{frontend,backend}/   Vitest unit tests (happy-dom env)
+```
+
+See [`docs/features/typescript-conversion.spec.md`](docs/features/typescript-conversion.spec.md)
+for the full conversion spec.
 
 ## License
 
