@@ -129,10 +129,72 @@ export function playChime(deps: DelightDeps, kind: "complete" | "undo" | "fanfar
   return "synth"
 }
 
-export function bumpTally(_deps: DelightDeps, _childId: string, _delta: number): void {
-  throw new Error("not implemented")
+export function bumpTally(deps: DelightDeps, childId: string, delta: number): void {
+  if (!deps.config.delight.tallyBump) return
+  if (delta === 0) return
+  const section = deps.doc.querySelector(
+    `.child-section[data-child-id="${CSS.escape(childId)}"]`
+  )
+  if (!section) return
+  const tallyEl = section.querySelector(".child-tally") as HTMLElement | null
+  if (!tallyEl) return
+
+  if (delta > 0) {
+    tallyEl.classList.add("bumping")
+    tallyEl.addEventListener("animationend", function onEnd() {
+      tallyEl.classList.remove("bumping")
+      tallyEl.removeEventListener("animationend", onEnd)
+    })
+    const rect = tallyEl.getBoundingClientRect()
+    const float = deps.doc.createElement("span")
+    float.className = "tally-float"
+    float.textContent = `+${delta}`
+    float.style.left = `${rect.left + rect.width / 2 - 12}px`
+    float.style.top = `${rect.top - 8}px`
+    float.addEventListener("animationend", () => float.remove())
+    deps.doc.body.appendChild(float)
+  } else {
+    tallyEl.classList.add("dimming")
+    tallyEl.addEventListener("animationend", function onEnd() {
+      tallyEl.classList.remove("dimming")
+      tallyEl.removeEventListener("animationend", onEnd)
+    })
+  }
 }
 
-export function triggerAllDoneCelebration(_deps: DelightDeps, _child: ChildState): void {
-  throw new Error("not implemented")
+export function triggerAllDoneCelebration(deps: DelightDeps, child: ChildState): void {
+  if (!deps.config.delight.allDoneCelebration) return
+  const section = deps.doc.querySelector(
+    `.child-section[data-child-id="${CSS.escape(child.id)}"]`
+  ) as HTMLElement | null
+  if (!section) return
+
+  section.style.setProperty("--child-glow", child.color || "#ffd93d")
+  section.classList.add("all-done")
+
+  const rect = section.getBoundingClientRect()
+  const showers = 4
+  for (let i = 0; i < showers; i++) {
+    const xFrac = (i + 0.5) / showers
+    const fauxEl = {
+      getBoundingClientRect() {
+        return {
+          left: rect.left + rect.width * xFrac - 10,
+          top: rect.top + rect.height * 0.4,
+          width: 20,
+          height: 20,
+          right: 0, bottom: 0, x: 0, y: 0, toJSON: () => ({}),
+        } as DOMRect
+      },
+    } as unknown as Element
+    triggerConfetti(deps, fauxEl, { count: 14, minDistance: 120, maxDistance: 220 })
+  }
+
+  if (deps.config.delight.sound) {
+    playChime(deps, "fanfare")
+  }
+
+  setTimeout(() => {
+    if (section.isConnected) section.classList.remove("all-done")
+  }, 3000)
 }
