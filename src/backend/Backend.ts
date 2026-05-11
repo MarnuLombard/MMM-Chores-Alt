@@ -76,8 +76,14 @@ export function createBackendSpec(deps: BackendDeps): BackendSpec {
       this.sendState()
     },
 
-    handleToggle(_payload) {
-      throw new Error("not implemented")
+    handleToggle(payload) {
+      if (!this.repository) return
+      const date = todayStr(now())
+      const inserted = this.repository.insertCompletion(date, payload.childId, payload.choreId)
+      if (!inserted) {
+        this.repository.deleteCompletion(date, payload.childId, payload.choreId)
+      }
+      this.sendState()
     },
 
     handleRedeem(_payload) {
