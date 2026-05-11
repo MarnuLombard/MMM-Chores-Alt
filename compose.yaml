@@ -1,0 +1,31 @@
+services:
+  # chowns the named volume to the node user (UID 1000) so the main
+  # service can write into it; runs once and exits.
+  init-volumes:
+    image: karsten13/magicmirror:latest
+    user: root
+    entrypoint: ["sh", "-c"]
+    command: ["chown -R 1000:1000 /opt/magic_mirror/modules/MMM-Chores-Alt/node_modules"]
+    volumes:
+      - module_node_modules:/opt/magic_mirror/modules/MMM-Chores-Alt/node_modules
+    restart: "no"
+
+  magicmirror:
+    image: karsten13/magicmirror:latest
+    container_name: mmm-chores-alt-mm
+    depends_on:
+      init-volumes:
+        condition: service_completed_successfully
+    environment:
+      TZ: UTC
+      MM_SCENARIO: server
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./:/opt/magic_mirror/modules/MMM-Chores-Alt
+      - module_node_modules:/opt/magic_mirror/modules/MMM-Chores-Alt/node_modules
+      - ./docker/config:/opt/magic_mirror/config
+    restart: unless-stopped
+
+volumes:
+  module_node_modules:

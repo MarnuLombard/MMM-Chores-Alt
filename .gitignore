@@ -113,3 +113,8 @@ chores.db-shm
 /.claude/settings.local.json
 
 docs/plans/
+
+# Docker bind-mount runtime artefacts
+docker/node_modules/
+docker/config/basepath.js
+docker/config/custom.css
