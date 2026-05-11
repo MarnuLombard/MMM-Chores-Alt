@@ -3,9 +3,25 @@ import type { ChildState } from "../types/State"
 
 export type DelightAudio = {
   currentTime: number
-  createOscillator: () => unknown
-  createGain: () => unknown
+  createOscillator: () => DelightOscillator
+  createGain: () => DelightGain
   destination: unknown
+}
+
+export type DelightOscillator = {
+  type: string
+  frequency: { value: number }
+  connect: (target: unknown) => { connect: (target: unknown) => unknown }
+  start: (time: number) => void
+  stop: (time: number) => void
+}
+
+export type DelightGain = {
+  gain: {
+    setValueAtTime: (value: number, time: number) => void
+    exponentialRampToValueAtTime: (value: number, time: number) => void
+  }
+  connect: (target: unknown) => { connect: (target: unknown) => unknown }
 }
 
 export type DelightDeps = {
@@ -24,12 +40,93 @@ export type ConfettiOpts = {
   palette?: string[]
 }
 
-export function triggerConfetti(_deps: DelightDeps, _target: Element, _opts?: ConfettiOpts): number {
-  throw new Error("not implemented")
+const DEFAULT_PALETTE = [
+  "#ff6b6b", "#ffd93d", "#6bcf7f",
+  "#4ecdc4", "#a78bfa", "#ff9f4a",
+]
+const SHAPES = ["", "shape-circle", "shape-strip"]
+
+export function triggerConfetti(deps: DelightDeps, target: Element, opts: ConfettiOpts = {}): number {
+  if (!deps.config.delight.confetti) return 0
+  const rect = target.getBoundingClientRect()
+  const cx = rect.left + rect.width / 2
+  const cy = rect.top + rect.height / 2
+  const count = opts.count ?? 12
+  const minDist = opts.minDistance ?? 70
+  const maxDist = opts.maxDistance ?? 120
+  const palette = opts.palette ?? DEFAULT_PALETTE
+
+  for (let i = 0; i < count; i++) {
+    const p = deps.doc.createElement("span")
+    p.className = "confetti-particle"
+    const shape = SHAPES[Math.floor(deps.random() * SHAPES.length)]
+    if (shape) p.classList.add(shape)
+    const angle = deps.random() * 360
+    const distance = minDist + deps.random() * (maxDist - minDist)
+    const color = palette[Math.floor(deps.random() * palette.length)]
+    const duration = 600 + deps.random() * 320
+    const rot = (deps.random() < 0.5 ? -1 : 1) * (360 + deps.random() * 540)
+    p.style.left = `${cx - 5}px`
+    p.style.top = `${cy - 5}px`
+    p.style.setProperty("--angle", `${angle}deg`)
+    p.style.setProperty("--distance", `${distance}px`)
+    p.style.setProperty("--color", color)
+    p.style.setProperty("--duration", `${duration}ms`)
+    p.style.setProperty("--rot", `${rot}deg`)
+    p.addEventListener("animationend", () => p.remove())
+    deps.doc.body.appendChild(p)
+  }
+  return count
 }
 
-export function playChime(_deps: DelightDeps, _kind: "complete" | "undo" | "fanfare"): "file" | "synth" | "skip" {
-  throw new Error("not implemented")
+function synthNote(audio: DelightAudio, freq: number, startTime: number, duration: number, peakGain: number): void {
+  const osc = audio.createOscillator()
+  const gain = audio.createGain()
+  osc.type = "triangle"
+  osc.frequency.value = freq
+  gain.gain.setValueAtTime(0.0001, startTime)
+  gain.gain.exponentialRampToValueAtTime(peakGain, startTime + 0.012)
+  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration)
+  osc.connect(gain).connect(audio.destination)
+  osc.start(startTime)
+  osc.stop(startTime + duration + 0.05)
+}
+
+export function playChime(deps: DelightDeps, kind: "complete" | "undo" | "fanfare"): "file" | "synth" | "skip" {
+  if (!deps.config.delight.sound) return "skip"
+  const filePath = kind === "complete"
+    ? deps.config.sounds.complete
+    : kind === "undo" ? deps.config.sounds.undo : null
+  if (filePath) {
+    const Ctor = deps.AudioCtor ?? (globalThis as { Audio?: typeof Audio }).Audio
+    if (Ctor) {
+      const el = new Ctor(filePath)
+      try {
+        el.currentTime = 0
+        const p = el.play()
+        if (p && typeof (p as Promise<void>).catch === "function") {
+          (p as Promise<void>).catch(() => {})
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return "file"
+  }
+  if (!deps.audio) return "synth"
+  const t = deps.audio.currentTime
+  if (kind === "complete") {
+    synthNote(deps.audio, 523.25, t, 0.10, 0.16)
+    synthNote(deps.audio, 659.25, t + 0.07, 0.16, 0.18)
+  } else if (kind === "fanfare") {
+    synthNote(deps.audio, 523.25, t, 0.10, 0.18)
+    synthNote(deps.audio, 659.25, t + 0.07, 0.10, 0.18)
+    synthNote(deps.audio, 783.99, t + 0.14, 0.10, 0.18)
+    synthNote(deps.audio, 1046.5, t + 0.21, 0.26, 0.20)
+  } else {
+    synthNote(deps.audio, 392.0, t, 0.20, 0.10)
+  }
+  return "synth"
 }
 
 export function bumpTally(_deps: DelightDeps, _childId: string, _delta: number): void {
