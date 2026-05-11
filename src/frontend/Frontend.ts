@@ -104,7 +104,8 @@ Module.register("MMM-Chores-Alt", {
   },
 
   getDom(this: ModuleThis) {
-    const self = this
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self: ModuleThis = this
     const onChoreClick = (childId: string, choreId: string) => {
       const btn = document.querySelector(
         `.child-section[data-child-id="${CSS.escape(childId)}"] .chore-button[data-chore-id="${CSS.escape(choreId)}"]`

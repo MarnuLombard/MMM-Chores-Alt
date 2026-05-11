@@ -9,6 +9,15 @@ import tsPlugin from "@typescript-eslint/eslint-plugin"
 
 export default defineConfig([
   {
+    ignores: [
+      "MMM-Chores-Alt.js",
+      "MMM-Chores-Alt.js.map",
+      "node_helper.js",
+      "node_helper.js.map",
+      "node_modules/**",
+    ],
+  },
+  {
     files: ["**/*.css"],
     plugins: { css },
     language: "css/css",
