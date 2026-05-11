@@ -1,3 +1,3 @@
-export function isImageIcon(_icon: string): boolean {
-  throw new Error("not implemented")
+export function isImageIcon(icon: string): boolean {
+  return /[/.]/.test(icon)
 }
