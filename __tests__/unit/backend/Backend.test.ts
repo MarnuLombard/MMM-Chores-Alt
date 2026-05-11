@@ -107,6 +107,51 @@ describe("Backend TOGGLE (AC3, R12)", () => {
   })
 })
 
+describe("Backend REDEEM (AC4, AC5, AC6)", () => {
+  it("wrong PIN emits REDEEM_FAILED { reason: 'wrong_pin' } and writes nothing (R13)", () => {
+    const spec = makeSpec()
+    spec.handleInit(baseConfig)
+    spec.handleToggle({ childId: "alice", choreId: "bed" })
+    ;(spec.sendSocketNotification as ReturnType<typeof vi.fn>).mockClear()
+    spec.handleRedeem({ childId: "alice", pin: "0000" })
+    expect(spec.sendSocketNotification).toHaveBeenCalledWith(
+      "REDEEM_FAILED",
+      { childId: "alice", reason: "wrong_pin" }
+    )
+    expect(spec.repository!.getRedeemedTotal("alice")).toBe(0)
+  })
+
+  it("zero tally emits REDEEM_FAILED { reason: 'no_points' } (R14)", () => {
+    const spec = makeSpec()
+    spec.handleInit(baseConfig)
+    ;(spec.sendSocketNotification as ReturnType<typeof vi.fn>).mockClear()
+    spec.handleRedeem({ childId: "alice", pin: "1234" })
+    expect(spec.sendSocketNotification).toHaveBeenCalledWith(
+      "REDEEM_FAILED",
+      { childId: "alice", reason: "no_points" }
+    )
+    expect(spec.repository!.getRedeemedTotal("alice")).toBe(0)
+  })
+
+  it("happy path writes redemption with amount=tally and broadcasts STATE with tally=0 (R15)", () => {
+    const fixed = new Date(2026, 4, 9, 12, 0, 0)
+    const spec = makeSpec({ now: () => fixed })
+    spec.handleInit(baseConfig)
+    spec.handleToggle({ childId: "alice", choreId: "bed" })
+    spec.handleToggle({ childId: "alice", choreId: "teeth" })
+    // tally now 3 (1 + 2)
+    ;(spec.sendSocketNotification as ReturnType<typeof vi.fn>).mockClear()
+    spec.handleRedeem({ childId: "alice", pin: "1234" })
+    expect(spec.repository!.getRedeemedTotal("alice")).toBe(3)
+    const calls = (spec.sendSocketNotification as ReturnType<typeof vi.fn>).mock.calls
+    const [notif, payload] = calls.at(-1)!
+    expect(notif).toBe("STATE")
+    const alice = (payload as { children: Array<{ id: string, tally: number }> })
+      .children.find(c => c.id === "alice")!
+    expect(alice.tally).toBe(0)
+  })
+})
+
 describe("Backend cron (R24)", () => {
   it("midnight cron handler calls sendState", () => {
     let capturedHandler: (() => void) | null = null
