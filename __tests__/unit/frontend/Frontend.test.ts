@@ -8,9 +8,9 @@ type ModuleImpl = {
 }
 
 const registerMock = vi.fn()
-;(globalThis as { Module?: { register: typeof registerMock } }).Module = { register: registerMock }
 
 beforeAll(async () => {
+  ;(globalThis as { Module?: { register: typeof registerMock } }).Module = { register: registerMock }
   await import("../../../src/frontend/Frontend")
 })
 
