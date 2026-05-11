@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { triggerConfetti, playChime, type DelightDeps } from "../../../src/frontend/delight"
+import { triggerConfetti, playChime, bumpTally, triggerAllDoneCelebration, type DelightDeps } from "../../../src/frontend/delight"
+import type { ChildState } from "../../../src/types/State"
 
 function makeDeps(overrides: Partial<DelightDeps> = {}): DelightDeps {
   const oscCalls: unknown[] = []
@@ -104,5 +105,74 @@ describe("playChime (R31)", () => {
     const deps = makeDeps()
     expect(playChime(deps, "complete")).toBe("synth")
     expect((deps.audio!.createOscillator as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(2)
+  })
+})
+
+function setupSection(childId: string): HTMLElement {
+  const section = document.createElement("div")
+  section.className = "child-section"
+  section.dataset.childId = childId
+  const tally = document.createElement("span")
+  tally.className = "child-tally"
+  tally.textContent = "0pts"
+  section.appendChild(tally)
+  document.body.appendChild(section)
+  return section
+}
+
+describe("bumpTally (R29)", () => {
+  beforeEach(() => { document.body.innerHTML = "" })
+
+  it("positive delta: adds 'bumping' class and creates +N float", () => {
+    setupSection("alice")
+    const deps = makeDeps()
+    bumpTally(deps, "alice", 2)
+    const tally = document.querySelector(".child-tally")!
+    expect(tally.classList.contains("bumping")).toBe(true)
+    expect(document.body.querySelector(".tally-float")!.textContent).toBe("+2")
+  })
+
+  it("negative delta: adds 'dimming' class, no float element", () => {
+    setupSection("alice")
+    const deps = makeDeps()
+    bumpTally(deps, "alice", -1)
+    const tally = document.querySelector(".child-tally")!
+    expect(tally.classList.contains("dimming")).toBe(true)
+    expect(document.body.querySelector(".tally-float")).toBeNull()
+  })
+
+  it("zero delta: no-op", () => {
+    setupSection("alice")
+    const deps = makeDeps()
+    bumpTally(deps, "alice", 0)
+    const tally = document.querySelector(".child-tally")!
+    expect(tally.classList.contains("bumping")).toBe(false)
+    expect(tally.classList.contains("dimming")).toBe(false)
+    expect(document.body.querySelector(".tally-float")).toBeNull()
+  })
+
+  it("missing section: no throw", () => {
+    const deps = makeDeps()
+    expect(() => bumpTally(deps, "ghost", 1)).not.toThrow()
+  })
+})
+
+describe("triggerAllDoneCelebration (R30)", () => {
+  beforeEach(() => {
+    document.body.innerHTML = ""
+    vi.useFakeTimers()
+  })
+
+  it("removes 'all-done' class after 3s", () => {
+    const section = setupSection("alice")
+    const child: ChildState = { id: "alice", name: "Alice", tally: 5, chores: [
+      { id: "bed", icon: "x", points: 1, done: true },
+    ] }
+    const deps = makeDeps()
+    triggerAllDoneCelebration(deps, child)
+    expect(section.classList.contains("all-done")).toBe(true)
+    vi.advanceTimersByTime(3000)
+    expect(section.classList.contains("all-done")).toBe(false)
+    vi.useRealTimers()
   })
 })
