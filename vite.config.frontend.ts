@@ -1,21 +1,21 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from "vite"
 
 export default defineConfig({
   build: {
     lib: {
-      entry: 'src/frontend/Frontend.ts',
-      formats: ['umd'],
-      name: 'MMMChoresAlt',
-      fileName: () => 'MMM-Chores-Alt.js',
+      entry: "src/frontend/Frontend.ts",
+      formats: ["umd"],
+      name: "MMMChoresAlt",
+      fileName: () => "MMM-Chores-Alt.js",
     },
-    outDir: '.',
+    outDir: ".",
     emptyOutDir: false,
     sourcemap: true,
-    minify: 'terser',
+    minify: "terser",
     rollupOptions: {
-      external: ['logger'],
+      external: ["logger"],
       output: {
-        globals: { logger: 'Log' },
+        globals: { logger: "Log" },
       },
     },
   },
