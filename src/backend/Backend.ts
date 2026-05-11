@@ -5,6 +5,7 @@ import type { Config } from "../types/Config"
 import { SocketNotification } from "../constants/SocketNotifications"
 import { buildStatePayload } from "./stateBuilder"
 import { todayStr } from "./dateUtils"
+import { computeTally } from "./tally"
 
 export type CronHandle = { stop: () => void }
 
@@ -86,8 +87,22 @@ export function createBackendSpec(deps: BackendDeps): BackendSpec {
       this.sendState()
     },
 
-    handleRedeem(_payload) {
-      throw new Error("not implemented")
+    handleRedeem(payload) {
+      if (!this.config || !this.repository) return
+      const { childId, pin } = payload
+      if (pin !== this.config.parentPin) {
+        this.sendSocketNotification(SocketNotification.REDEEM_FAILED, { childId, reason: "wrong_pin" })
+        return
+      }
+      const all = this.repository.getAllCompletions()
+      const redeemed = this.repository.getRedeemedTotal(childId)
+      const tally = computeTally(childId, this.config.children, all, redeemed)
+      if (tally <= 0) {
+        this.sendSocketNotification(SocketNotification.REDEEM_FAILED, { childId, reason: "no_points" })
+        return
+      }
+      this.repository.insertRedemption(childId, tally, now().toISOString())
+      this.sendState()
     },
 
     scheduleMidnightReset() {
