@@ -9,6 +9,23 @@ export type PinAction =
   | { type: "failed", reason: "wrong_pin" | "no_points" }
   | { type: "reset" }
 
-export function reducePin(_state: PinState, _action: PinAction): PinState {
-  throw new Error("not implemented")
+const PIN_MAX = 8
+
+export function reducePin(state: PinState, action: PinAction): PinState {
+  switch (action.type) {
+    case "digit":
+      if (state.input.length >= PIN_MAX) return state
+      return { input: state.input + action.digit, error: null }
+    case "back":
+      return { input: state.input.slice(0, -1), error: null }
+    case "submit":
+      return state
+    case "failed":
+      return {
+        input: "",
+        error: action.reason === "wrong_pin" ? "Wrong PIN" : "No points to redeem",
+      }
+    case "reset":
+      return { input: "", error: null }
+  }
 }
