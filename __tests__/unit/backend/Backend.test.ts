@@ -80,6 +80,33 @@ describe("Backend INIT (AC2)", () => {
   })
 })
 
+describe("Backend TOGGLE (AC3, R12)", () => {
+  it("inserts on first toggle and sets done=true in STATE", () => {
+    const spec = makeSpec()
+    spec.handleInit(baseConfig)
+    ;(spec.sendSocketNotification as ReturnType<typeof vi.fn>).mockClear()
+    spec.handleToggle({ childId: "alice", choreId: "bed" })
+    const calls = (spec.sendSocketNotification as ReturnType<typeof vi.fn>).mock.calls
+    const [notif, payload] = calls.at(-1)!
+    expect(notif).toBe("STATE")
+    const alice = (payload as { children: Array<{ id: string, chores: Array<{ id: string, done: boolean }> }> })
+      .children.find(c => c.id === "alice")!
+    expect(alice.chores.find(c => c.id === "bed")!.done).toBe(true)
+  })
+
+  it("deletes on second toggle (done=false)", () => {
+    const spec = makeSpec()
+    spec.handleInit(baseConfig)
+    spec.handleToggle({ childId: "alice", choreId: "bed" })
+    spec.handleToggle({ childId: "alice", choreId: "bed" })
+    const calls = (spec.sendSocketNotification as ReturnType<typeof vi.fn>).mock.calls
+    const [, payload] = calls.at(-1)!
+    const alice = (payload as { children: Array<{ id: string, chores: Array<{ id: string, done: boolean }> }> })
+      .children.find(c => c.id === "alice")!
+    expect(alice.chores.find(c => c.id === "bed")!.done).toBe(false)
+  })
+})
+
 describe("Backend cron (R24)", () => {
   it("midnight cron handler calls sendState", () => {
     let capturedHandler: (() => void) | null = null
