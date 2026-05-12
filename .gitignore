@@ -114,7 +114,6 @@ chores.db-shm
 
 docs/plans/
 
-# Docker bind-mount runtime artefacts
-docker/node_modules/
+# Docker generated config files
 docker/config/basepath.js
 docker/config/custom.css

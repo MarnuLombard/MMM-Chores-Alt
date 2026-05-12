@@ -1,31 +1,29 @@
-services:
-  # chowns the named volume to the node user (UID 1000) so the main
-  # service can write into it; runs once and exits.
-  init-volumes:
-    image: karsten13/magicmirror:latest
-    user: root
-    entrypoint: ["sh", "-c"]
-    command: ["chown -R 1000:1000 /opt/magic_mirror/modules/MMM-Chores-Alt/node_modules"]
-    volumes:
-      - module_node_modules:/opt/magic_mirror/modules/MMM-Chores-Alt/node_modules
-    restart: "no"
 
+services:
   magicmirror:
-    image: karsten13/magicmirror:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     container_name: mmm-chores-alt-mm
-    depends_on:
-      init-volumes:
-        condition: service_completed_successfully
     environment:
       TZ: UTC
       MM_SCENARIO: server
     ports:
       - "8081:8080"
     volumes:
-      - ./:/opt/magic_mirror/modules/MMM-Chores-Alt
-      - module_node_modules:/opt/magic_mirror/modules/MMM-Chores-Alt/node_modules
+      # Named volume holds the entire module dir, seeded from the image
+      # (which has node_modules baked in). chores.db will live here too.
+      - module_dir:/opt/magic_mirror/modules/MMM-Chores-Alt
+      # Bind-mount runtime files over the named volume so host-side
+      # `npm run build` is picked up without rebuilding the image.
+      - ./MMM-Chores-Alt.js:/opt/magic_mirror/modules/MMM-Chores-Alt/MMM-Chores-Alt.js
+      - ./MMM-Chores-Alt.js.map:/opt/magic_mirror/modules/MMM-Chores-Alt/MMM-Chores-Alt.js.map
+      - ./node_helper.js:/opt/magic_mirror/modules/MMM-Chores-Alt/node_helper.js
+      - ./node_helper.js.map:/opt/magic_mirror/modules/MMM-Chores-Alt/node_helper.js.map
+      - ./MMM-Chores-Alt.css:/opt/magic_mirror/modules/MMM-Chores-Alt/MMM-Chores-Alt.css
+      - ./package.json:/opt/magic_mirror/modules/MMM-Chores-Alt/package.json
       - ./docker/config:/opt/magic_mirror/config
     restart: unless-stopped
 
 volumes:
-  module_node_modules:
+  module_dir:

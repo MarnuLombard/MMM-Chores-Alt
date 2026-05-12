@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+__tests__
+__mocks__
+src
+docs
+docker
+*.log
+chores.db
+chores.db-wal
+chores.db-shm
