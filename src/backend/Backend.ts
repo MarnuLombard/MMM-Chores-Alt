@@ -28,7 +28,7 @@ export type BackendSpec = {
   handleToggle: (payload: { childId: string, choreId: string }) => void
   handleRedeem: (payload: { childId: string, pin: string }) => void
   sendState: () => void
-  sendSocketNotification: (notification: string, payload: unknown) => void
+  sendSocketNotification?: (notification: string, payload: unknown) => void
   scheduleMidnightReset: () => void
 }
 
@@ -41,7 +41,6 @@ export function createBackendSpec(deps: BackendDeps): BackendSpec {
     config: null,
     repository: null,
     cronJob: null,
-    sendSocketNotification: () => {},
 
     start() {},
 
@@ -91,14 +90,14 @@ export function createBackendSpec(deps: BackendDeps): BackendSpec {
       if (!this.config || !this.repository) return
       const { childId, pin } = payload
       if (pin !== this.config.parentPin) {
-        this.sendSocketNotification(SocketNotification.REDEEM_FAILED, { childId, reason: "wrong_pin" })
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "wrong_pin" })
         return
       }
       const all = this.repository.getAllCompletions()
       const redeemed = this.repository.getRedeemedTotal(childId)
       const tally = computeTally(childId, this.config.children, all, redeemed)
       if (tally <= 0) {
-        this.sendSocketNotification(SocketNotification.REDEEM_FAILED, { childId, reason: "no_points" })
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "no_points" })
         return
       }
       this.repository.insertRedemption(childId, tally, now().toISOString())
@@ -122,7 +121,7 @@ export function createBackendSpec(deps: BackendDeps): BackendSpec {
         redeemedByChild.set(child.id, this.repository.getRedeemedTotal(child.id))
       }
       const payload = buildStatePayload(this.config, today, todayCompletions, all, redeemedByChild)
-      this.sendSocketNotification(SocketNotification.STATE, payload)
+      this.sendSocketNotification?.(SocketNotification.STATE, payload)
     },
   }
 
