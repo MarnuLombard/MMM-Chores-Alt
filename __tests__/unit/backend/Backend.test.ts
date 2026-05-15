@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import { createBackendSpec, type BackendDeps } from "../../../src/backend/Backend"
-import { ChoresRepository, type IChoresRepository } from "../../../src/backend/repository"
+import { describe, it, expect, vi } from "vitest"
+import { createBackend, type BackendDeps } from "../../../src/backend/Backend"
+import { ChoresRepository } from "../../../src/backend/repository"
 import type { Config } from "../../../src/types/Config"
 
 type Spec = {
@@ -12,7 +12,7 @@ type Spec = {
   handleRedeem: (p: { childId: string, pin: string }) => void
   sendState: () => void
   sendSocketNotification: (n: string, p: unknown) => void
-  repository?: IChoresRepository
+  repository: ChoresRepository
   config?: Config
   cronJob?: { stop: () => void }
   path: string
@@ -37,46 +37,29 @@ const baseConfig: Config = {
 function makeSpec(overrides?: Partial<BackendDeps>): Spec {
   const cronStops: Array<() => void> = []
   const deps: BackendDeps = {
-    repositoryFactory: () => new ChoresRepository(":memory:"),
+    repository: new ChoresRepository(":memory:"),
     cronSchedule: vi.fn((_expr: string, handler: () => void) => {
       const stop = vi.fn()
       cronStops.push(stop)
-      // attach handler so tests can call it
       ;(stop as unknown as { handler: () => void }).handler = handler
       return { stop }
     }),
     ...overrides,
   }
-  const spec = createBackendSpec(deps) as Spec
+  const spec = createBackend(deps) as Spec
   spec.path = "/tmp/test"
   spec.sendSocketNotification = vi.fn()
   return spec
 }
 
 describe("Backend INIT (AC2)", () => {
-  let spec: Spec
-  beforeEach(() => { spec = makeSpec() })
-
-  it("opens repository on first INIT (R6)", () => {
+  it("first INIT broadcasts STATE", () => {
+    const spec = makeSpec()
     spec.handleInit(baseConfig)
-    expect(spec.repository).toBeDefined()
-    expect(spec.repository!.isOpen()).toBe(true)
-  })
-
-  it("does NOT open a second repository on re-INIT (R6)", () => {
-    spec.handleInit(baseConfig)
-    const first = spec.repository
-    spec.handleInit(baseConfig)
-    expect(spec.repository).toBe(first)
-  })
-
-  it("re-INIT after stop() opens a fresh repository (R7)", () => {
-    spec.handleInit(baseConfig)
-    const first = spec.repository
-    spec.stop()
-    spec.handleInit(baseConfig)
-    expect(spec.repository).not.toBe(first)
-    expect(spec.repository!.isOpen()).toBe(true)
+    expect(spec.sendSocketNotification).toHaveBeenCalledWith(
+      "STATE",
+      expect.objectContaining({ children: expect.any(Array) })
+    )
   })
 })
 

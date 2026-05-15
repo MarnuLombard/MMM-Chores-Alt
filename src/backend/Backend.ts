@@ -1,83 +1,79 @@
-import path from "node:path"
-import cron from "node-cron"
-import type { IChoresRepository } from "./repository"
-import type { Config } from "../types/Config"
-import { SocketNotification } from "../constants/SocketNotifications"
-import { buildStatePayload } from "./stateBuilder"
-import { todayStr } from "./dateUtils"
-import { computeTally } from "./tally"
+import cron from "node-cron";
+import type { ChoresRepository } from "./repository";
+import type { Config } from "../types/Config";
+import { SocketNotification } from "../constants/SocketNotifications";
+import { buildStatePayload } from "./stateBuilder";
+import { todayStr } from "./dateUtils";
+import { computeTally } from "./tally";
+
 
 export type CronHandle = { stop: () => void }
 
 export type BackendDeps = {
-  repositoryFactory: (path: string) => IChoresRepository
+  repository: ChoresRepository
   now?: () => Date
   cronSchedule?: (expr: string, handler: () => void) => CronHandle
 }
 
-export type BackendSpec = {
+type TogglePayload = { childId: string, choreId: string };
+type RedeemPayload = { childId: string, pin: string };
+
+export type Backend = {
   name?: string
   path: string
   config: Config | null
-  repository: IChoresRepository | null
+  repository: ChoresRepository
   cronJob: CronHandle | null
   start: () => void
   stop: () => void
   socketNotificationReceived: (notif: string, payload: unknown) => void
   handleInit: (config: Config) => void
-  handleToggle: (payload: { childId: string, choreId: string }) => void
-  handleRedeem: (payload: { childId: string, pin: string }) => void
+  handleToggle: (payload: TogglePayload) => void
+  handleRedeem: (payload: RedeemPayload) => void
   sendState: () => void
   sendSocketNotification?: (notification: string, payload: unknown) => void
   scheduleMidnightReset: () => void
 }
 
-export function createBackendSpec(deps: BackendDeps): BackendSpec {
+export function createBackend(deps: BackendDeps): Backend {
   const now = deps.now ?? (() => new Date())
   const cronSchedule = deps.cronSchedule ?? ((expr, handler) => cron.schedule(expr, handler) as unknown as CronHandle)
 
-  const spec: BackendSpec = {
+  return {
     path: "",
     config: null,
-    repository: null,
+    repository: deps.repository,
     cronJob: null,
 
-    start() {},
+    start() {
+    },
 
     stop() {
       if (this.cronJob) {
         this.cronJob.stop()
         this.cronJob = null
       }
-      if (this.repository) {
-        this.repository.close()
-        this.repository = null
-      }
+      this.repository.close()
     },
 
-    socketNotificationReceived(notif, payload) {
+    socketNotificationReceived(notif: string, payload: unknown) {
       switch (notif) {
         case SocketNotification.INIT:
-          return this.handleInit(payload as Config)
+          return this.handleInit(<Config> payload)
         case SocketNotification.TOGGLE_CHORE:
-          return this.handleToggle(payload as { childId: string, choreId: string })
+          return this.handleToggle(<TogglePayload> payload)
         case SocketNotification.REDEEM:
-          return this.handleRedeem(payload as { childId: string, pin: string })
+          return this.handleRedeem(<RedeemPayload> payload)
       }
     },
 
-    handleInit(config) {
+    handleInit(config: Config) {
       this.config = config
-      if (!this.repository || !this.repository.isOpen()) {
-        const dbPath = path.join(this.path, "chores.db")
-        this.repository = deps.repositoryFactory(dbPath)
-      }
       this.scheduleMidnightReset()
       this.sendState()
     },
 
     handleToggle(payload) {
-      if (!this.repository) return
       const date = todayStr(now())
       const inserted = this.repository.insertCompletion(date, payload.childId, payload.choreId)
       if (!inserted) {
@@ -87,17 +83,17 @@ export function createBackendSpec(deps: BackendDeps): BackendSpec {
     },
 
     handleRedeem(payload) {
-      if (!this.config || !this.repository) return
-      const { childId, pin } = payload
+      if (!this.config) return
+      const {childId, pin} = payload
       if (pin !== this.config.parentPin) {
-        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "wrong_pin" })
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, {childId, reason: "wrong_pin"})
         return
       }
       const all = this.repository.getAllCompletions()
       const redeemed = this.repository.getRedeemedTotal(childId)
       const tally = computeTally(childId, this.config.children, all, redeemed)
       if (tally <= 0) {
-        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "no_points" })
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, {childId, reason: "no_points"})
         return
       }
       this.repository.insertRedemption(childId, tally, now().toISOString())
@@ -110,7 +106,7 @@ export function createBackendSpec(deps: BackendDeps): BackendSpec {
     },
 
     sendState() {
-      if (!this.config || !this.repository) return
+      if (!this.config) return
       const today = todayStr(now())
       const all = this.repository.getAllCompletions()
       const todayCompletions = new Map<string, Set<string>>()
@@ -123,7 +119,5 @@ export function createBackendSpec(deps: BackendDeps): BackendSpec {
       const payload = buildStatePayload(this.config, today, todayCompletions, all, redeemedByChild)
       this.sendSocketNotification?.(SocketNotification.STATE, payload)
     },
-  }
-
-  return spec
+  };
 }

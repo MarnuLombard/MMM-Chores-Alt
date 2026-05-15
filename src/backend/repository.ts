@@ -1,16 +1,5 @@
 import Database from "better-sqlite3"
 
-export interface IChoresRepository {
-  isOpen(): boolean
-  close(): void
-  insertCompletion(date: string, childId: string, choreId: string): boolean
-  deleteCompletion(date: string, childId: string, choreId: string): void
-  getCompletionsForDay(date: string, childId: string): string[]
-  getAllCompletions(): { childId: string, choreId: string, count: number }[]
-  insertRedemption(childId: string, amount: number, redeemedAt: string): void
-  getRedeemedTotal(childId: string): number
-}
-
 type Stmts = {
   insertCompletion: Database.Statement
   deleteCompletion: Database.Statement
@@ -20,7 +9,7 @@ type Stmts = {
   getRedeemedTotal: Database.Statement
 }
 
-export class ChoresRepository implements IChoresRepository {
+export class ChoresRepository {
   private db: Database.Database
   private stmts: Stmts
 

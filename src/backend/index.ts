@@ -1,9 +1,10 @@
 import NodeHelper from "node_helper"
+import path from "node:path"
 import { ChoresRepository } from "./repository"
-import { createBackendSpec } from "./Backend"
+import { createBackend } from "./Backend"
 
 module.exports = NodeHelper.create(
-  createBackendSpec({
-    repositoryFactory: (p: string) => new ChoresRepository(p),
+  createBackend({
+    repository: new ChoresRepository(path.join(__dirname, "chores.db")),
   })
 )
