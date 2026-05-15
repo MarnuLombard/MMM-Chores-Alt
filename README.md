@@ -5,6 +5,16 @@ that lets children track their daily chores on a touchscreen. Each child gets a 
 with large tap buttons (supporting emoji or images for pre-reading-age children), a live
 point tally, and a parent-PIN-protected redemption flow.
 
+## Screenshots
+
+Chore buttons with live point tally per child:
+
+![Chore buttons row showing Alice and Bob with chore icons and point tallies](docs/images/chores-row.png)
+
+Parent-PIN redemption modal:
+
+![Redemption modal with numeric keypad for entering parent PIN](docs/images/redeem-modal.png)
+
 ## Installation
 
 ### Install
