@@ -1,428 +1,303 @@
-# MagicMirror² Module SDK Reference
+# MagicMirror² SDK - Agent Guide
 
-Synthesised from the official MagicMirror² module development docs. Last fetched: 2026-02-28.
-Source: https://docs.magicmirror.builders/module-development/
+This file is the entry point for agents working in this repo who need MagicMirror
+SDK knowledge. It points to the canonical extracted docs in
+[`magicmirror-sdk/`](./magicmirror-sdk/) and summarises the parts that matter for
+this codebase.
+
+The raw markdown under `magicmirror-sdk/` was fetched verbatim from
+[`MagicMirrorOrg/MagicMirror-Documentation`](https://github.com/MagicMirrorOrg/MagicMirror-Documentation/tree/master/module-development)
+on 2026-05-14. It is the canonical, current source. Live rendered version:
+<https://docs.magicmirror.builders/module-development/>.
+
+When a fact in this file disagrees with the raw extracted files, trust the raw
+files. When the raw files disagree with the upstream site, re-fetch.
 
 ---
 
-## 1. Module File Structure
+## How to use this directory
 
-```text
-modules/
-  MMM-Name/
-    MMM-Name.js       ← required: main module file
-    node_helper.js    ← optional: server-side helper
-    MMM-Name.css      ← optional: styles
-    public/           ← optional: browser-accessible static files at /MMM-Name/filename
-    translations/     ← optional: i18n JSON files
+### 1. Read this file first (you are here)
+
+It tells you which extracted doc to open for the task at hand and lists the
+project-specific gotchas that are not in the upstream docs.
+
+### 2. Open the specific extracted doc you need
+
+Files are named after the upstream pages and contain the full canonical text:
+
+| File | Read it when you need to ... |
+|---|---|
+| [`magicmirror-sdk/introduction.md`](./magicmirror-sdk/introduction.md) | Understand folder layout, `public/` serving, the empty-stub `node_helper.js` pattern. |
+| [`magicmirror-sdk/core-module-file.md`](./magicmirror-sdk/core-module-file.md) | Look up any frontend module method - `Module.register`, lifecycle (`init`/`start`/`suspend`/`resume`), `getDom`/`getTemplate`/`getHeader`, `notificationReceived`, `socketNotificationReceived`, `updateDom`, `sendNotification`, `sendSocketNotification`, `hide`/`show`, visibility locking, `translate`. This is the largest and most-used reference. |
+| [`magicmirror-sdk/node-helper.md`](./magicmirror-sdk/node-helper.md) | Work on `node_helper.js` - `NodeHelper.create`, `start`/`stop`/`loaded`, `socketNotificationReceived`, `this.expressApp`, `this.io`, native-module rebuild. |
+| [`magicmirror-sdk/notifications.md`](./magicmirror-sdk/notifications.md) | Look up system notifications (`ALL_MODULES_STARTED`, `DOM_OBJECTS_CREATED`, `MODULE_DOM_CREATED`, `MODULE_DOM_UPDATED`) and default-module notifications (alert, calendar, newsfeed). |
+| [`magicmirror-sdk/rendering.md`](./magicmirror-sdk/rendering.md) | Choose between `getDom` and Nunjucks templates, add Nunjucks filters via `this.nunjucksEnvironment()`. |
+| [`magicmirror-sdk/helper-methods.md`](./magicmirror-sdk/helper-methods.md) | Use the `MM` global - `MM.getModules().withClass(...).exceptModule(...).enumerate(...)` to drive other modules. |
+| [`magicmirror-sdk/logger.md`](./magicmirror-sdk/logger.md) | Confirm logger usage (`Log` is global on frontend, `require("logger")` in node_helper). |
+| [`magicmirror-sdk/documentation.md`](./magicmirror-sdk/documentation.md) | (Human-facing README writing tips. Agents can skip this one unless asked to author a README.) |
+
+### 3. Re-fetch if upstream may have changed
+
+```sh
+BASE=https://raw.githubusercontent.com/MagicMirrorOrg/MagicMirror-Documentation/master/module-development
+for f in introduction core-module-file node-helper notifications rendering helper-methods logger documentation; do
+  curl -fsSL "$BASE/$f.md" -o "docs/magicmirror-sdk/$f.md"
+done
 ```
 
-- Module names must be **globally unique** across the MagicMirror ecosystem.
-- Recommended naming convention: `MMM-MyModuleName`
-- The `modules/` folder is git-ignored by the MagicMirror core, so upgrades won't overwrite custom modules.
+A 9th upstream file `weather-provider.md` exists but is not relevant to this
+project (weather-provider plugin API only) and is intentionally not mirrored.
 
-### Registration
+---
 
-Every module file must call `Module.register()`:
+## Task -> doc mapping (quick reference)
 
-```javascript
+- "Add a new frontend method / change rendering" -> `core-module-file.md` + `rendering.md`
+- "Send data between module and node_helper" -> `core-module-file.md` (`sendSocketNotification`, `socketNotificationReceived`) + `node-helper.md`
+- "Coordinate with other modules" -> `notifications.md` + `helper-methods.md`
+- "Touch DB / cron / file system in node_helper" -> `node-helper.md`
+- "Add an HTTP endpoint" -> `node-helper.md` (`this.expressApp`)
+- "Hide/show modules, lockStrings" -> `core-module-file.md` (Visibility locking section)
+- "Translations / i18n" -> `core-module-file.md` (`translate`) + `rendering.md` (Nunjucks `translate` filter)
+
+---
+
+## Concentrated API cheatsheet
+
+Use this for instant recall; open the raw doc for full text.
+
+### Frontend module skeleton
+
+```js
 Module.register("MMM-Name", {
-  requiresVersion: "2.1.0",   // minimum MM version; module won't load if user is older
-  defaults: {                  // merged with user config; access via this.config.key
-    myOption: "defaultValue",
+  requiresVersion: "2.25.0",
+  defaults: { /* merged into this.config */ },
+
+  start() {                    // can be async; system awaits Promise.allSettled
+    this.state = null;
+    this.sendSocketNotification("INIT", this.config); // helper has no other way to get config
   },
-  // ... methods
+
+  getDom() { /* return a single Element */ },
+  // OR: getTemplate() + getTemplateData()
+
+  getStyles() { return [this.file("MMM-Name.css")]; },
+  getScripts() { return []; },
+  getTranslations() { return false; },
+
+  notificationReceived(notification, payload, sender) { /* core + other modules */ },
+  socketNotificationReceived(notification, payload) { /* from this module's helper */ },
+
+  suspend() { /* pause timers when hidden */ },
+  resume()  { /* restart timers when shown */ },
 });
 ```
 
----
+### Node helper skeleton
 
-## 2. Instance Properties
-
-Available on `this` within any module method after initialisation:
-
-| Property | Type | Description |
-|---|---|---|
-| `this.name` | String | Module name (as registered) |
-| `this.identifier` | String | Unique instance identifier |
-| `this.hidden` | Boolean | Current visibility state |
-| `this.config` | Object | Merged `defaults` + user config from `config.js` |
-| `this.data` | Object | Metadata: `classes`, `file`, `path`, `header`, `position` |
-
----
-
-## 3. Lifecycle Methods
-
-### `init()`
-Called during instantiation. Rarely needs overriding.
-
-### `loaded(callback)`
-Called when module loads (v2.1.1+). **Must call `callback()` when complete.**
-Subsequent modules have not yet loaded at this point.
-
-### `start()`
-Called when the system is ready to boot. The DOM has **not** been created yet.
-Use this to initialise module-level properties and kick off timers or data fetching.
-
-```javascript
-start: function() {
-  this.myData = [];
-  this.sendSocketNotification("INIT", this.config); // send config to node_helper here
-}
-```
-
-### `suspend()`
-Called when the module is hidden via `module.hide()`. Use to pause timers.
-
-### `resume()`
-Called when the module is shown via `module.show()`. Use to restart timers.
-
----
-
-## 4. Rendering
-
-### `getDom()` → DOM Element
-The primary rendering method. Called on initial load and after every `this.updateDom()`.
-Must return a single DOM element.
-
-```javascript
-getDom: function() {
-  const wrapper = document.createElement("div");
-  wrapper.className = "my-module";
-  wrapper.innerHTML = "Hello world";
-  return wrapper;
-}
-```
-
-### `getTemplate()` → String (alternative to getDom)
-Returns path to a Nunjucks (`.njk`) template file. Used instead of `getDom()`.
-
-```javascript
-getTemplate: function() {
-  return "MMM-Name.njk";
-}
-```
-
-### `getTemplateData()` → Object
-Provides the data object passed into the Nunjucks template.
-
-```javascript
-getTemplateData: function() {
-  return { items: this.myData };
-}
-```
-
-### `getHeader()` → String
-Returns the module header string. Reference `this.data.header` to honour user config.
-
-```javascript
-getHeader: function() {
-  return this.data.header;
-}
-```
-
-### `this.updateDom(speed)`
-Signals MagicMirror to call `getDom()` again and replace the current DOM.
-- `speed` — animation duration in milliseconds (optional)
-- Can also accept an options object: `{ speed: 300, animate: { in: "fadeIn", out: "fadeOut" } }`
-
-```javascript
-// After receiving new data:
-this.updateDom(300);
-```
-
----
-
-## 5. Resource Loading
-
-### `getStyles()` → Array\<String\>
-Returns CSS files to load before the module renders. Use `this.file()` for module-relative paths.
-
-```javascript
-getStyles: function() {
-  return [this.file("MMM-Name.css")];
-}
-```
-
-### `getScripts()` → Array\<String\>
-Returns JS files to load. Supports vendor files, module-relative paths, or external URLs.
-
-```javascript
-getScripts: function() {
-  return [this.file("vendor/some-lib.js")];
-}
-```
-
-### `getTranslations()` → Object | false
-Returns a map of language code → translation file path. Return `false` if no translations needed.
-
-```javascript
-getTranslations: function() {
-  return { en: "translations/en.json", nl: "translations/nl.json" };
-}
-```
-
-### `this.file(filename)` → String
-Resolves a path relative to the module's own directory.
-
----
-
-## 6. Notifications (Module ↔ Module / Core)
-
-### `notificationReceived(notification, payload, sender)`
-Receives notifications broadcast by the core system or other modules.
-`sender` is `undefined` for system-level notifications.
-
-System notifications fired by MagicMirror core:
-
-| Notification | When |
-|---|---|
-| `ALL_MODULES_STARTED` | All modules have started; `MM.getModules()` is now populated |
-| `DOM_OBJECTS_CREATED` | All module DOMs have been created |
-| `MODULE_DOM_CREATED` | This module's own DOM has been created |
-
-```javascript
-notificationReceived: function(notification, payload, sender) {
-  if (notification === "ALL_MODULES_STARTED") {
-    // safe to interact with other modules
-  }
-}
-```
-
-### `this.sendNotification(notification, payload)`
-Broadcasts a notification to all other modules (not to node_helper).
-
----
-
-## 7. Socket Communication (Module ↔ node_helper)
-
-The socket channel is the only way for the frontend module and backend node_helper to communicate.
-
-### Frontend → Backend
-
-```javascript
-this.sendSocketNotification("MY_NOTIFICATION", { key: "value" });
-```
-
-The socket connection is established after the **first** message is sent from the frontend.
-Always send config to the helper in `start()`.
-
-### Backend → Frontend
-
-In `node_helper.js`:
-```javascript
-this.sendSocketNotification("MY_RESPONSE", { data: result });
-```
-
-This broadcasts to **all instances** of the module type, not a single instance.
-
-### Frontend receives
-
-```javascript
-socketNotificationReceived: function(notification, payload) {
-  if (notification === "MY_RESPONSE") {
-    this.myData = payload.data;
-    this.updateDom();
-  }
-}
-```
-
-**Important:** Since one node_helper serves all instances of a module, include
-an identifier (e.g. `this.identifier`) in payloads if you need to target a specific instance.
-
----
-
-## 8. node_helper API
-
-`node_helper.js` runs in Node.js on the server side. Only one instance exists per module type.
-
-```javascript
+```js
 const NodeHelper = require("node_helper");
+const Log = require("logger"); // must require explicitly in node_helper
 
 module.exports = NodeHelper.create({
-  // properties and methods
+  start() { /* open DB, schedule cron */ },
+  stop()  { /* close DB, kill subprocesses - called on SIGINT */ },
+  socketNotificationReceived(notification, payload) {
+    if (notification === "INIT") this.config = payload;
+    // ...
+    this.sendSocketNotification("RESPONSE", data); // broadcasts to ALL instances of this module type
+  },
 });
 ```
 
-### Properties
+### Instance properties
 
-| Property | Description |
+Frontend `this`: `name`, `identifier`, `hidden`, `config`, `data` (`{classes, file, path, header, position}`).
+Helper `this`: `name`, `path`, `expressApp`, `io`.
+
+### System notifications (frontend, via `notificationReceived`)
+
+| Name | Fires when |
 |---|---|
-| `this.name` | Module name |
-| `this.path` | Absolute path to the module directory |
-| `this.expressApp` | Express.js instance — add custom HTTP routes here |
-| `this.io` | Socket.IO instance (direct socket access; rarely needed) |
+| `ALL_MODULES_STARTED` | All modules started; `MM.getModules()` is populated. |
+| `DOM_OBJECTS_CREATED` | All module DOMs created; safe to call `hide`/`show`. |
+| `MODULE_DOM_CREATED` | This module's DOM is ready. |
+| `MODULE_DOM_UPDATED` | This module's DOM was re-rendered after `updateDom()`. Only fires if content actually changed. |
 
-### Lifecycle
+### `updateDom` options (v2.25.0+)
 
-```javascript
-start: function() {
-  // Called on system boot. Initialise DB connections, cron jobs, etc.
-  this.db = openDatabase();
-},
-
-stop: function() {
-  // Called on SIGINT shutdown. ALWAYS close DB connections here.
-  this.db.close();
-}
+```js
+this.updateDom({ speed: 1000, animate: { in: "backInDown", out: "backOutUp" } });
 ```
 
-### Receiving from frontend
+### `MM.getModules()` chain
 
-```javascript
-socketNotificationReceived: function(notification, payload) {
-  if (notification === "INIT") {
-    this.config = payload; // store config sent from module start()
-  }
-  if (notification === "TOGGLE_CHORE") {
-    // handle DB write, send response back
-    this.sendSocketNotification("STATE_UPDATE", newState);
-  }
-}
+```js
+MM.getModules()
+  .withClass("classname")
+  .exceptWithClass("classname")
+  .exceptModule(this)
+  .enumerate(module => { /* ... */ });
 ```
+Returns `[]` until `ALL_MODULES_STARTED`.
 
-### No default config
-The node_helper has **no access** to `config.js`. The frontend module must explicitly
-send its config via socket notification (typically in `start()`).
+### Hide/show with locks
 
-### Native Node modules
-If you `npm install` a package with native bindings (e.g. `better-sqlite3`),
-run `@electron/rebuild` after install for Electron compatibility.
-
-### Custom Express routes
-```javascript
-start: function() {
-  this.expressApp.get("/MMM-Name/data", (req, res) => {
-    res.json({ ok: true });
-  });
-}
-```
-Static files in `public/` are served automatically at `/MMM-Name/filename`.
-
----
-
-## 9. Visibility
-
-### `this.hide(speed, callback, options)`
-Hides the module.
-- `speed` — animation duration in ms
-- `callback` — called when animation completes
-- `options.lockString` — string key to lock visibility (prevent other show calls)
-- `options.animate` — animation style
-
-### `this.show(speed, callback, options)`
-Shows the module.
-- `options.lockString` — release a specific lock
-- `options.force: true` — override all locks
-- `options.onError` — called if show fails
-
----
-
-## 10. Module Selection (MM global)
-
-Available in the browser context only. Safe to use after `ALL_MODULES_STARTED`.
-
-```javascript
-MM.getModules()                        // all loaded module instances (Array)
-  .withClass("classname")              // filter by class name (string or array)
-  .exceptWithClass("classname")        // exclude by class name
-  .exceptModule(this)                  // exclude a specific instance
-  .enumerate(function(module) { ... }) // iterate over results
+```js
+moduleA.hide(0, { lockString: this.identifier });
+moduleA.show(0, { lockString: this.identifier });
+moduleA.show(0, { force: true }); // wipes all locks - use sparingly
 ```
 
 ---
 
-## 11. Translation
+## Gotchas not derivable from the docs
 
-### In module JS
+These are project-specific or upstream-but-buried facts that bite agents
+repeatedly. Internalise them.
 
-```javascript
-// getTranslations() must return a path map first
-this.translate("MY_KEY")
-this.translate("GREETING", { name: "Alice" }) // variable substitution for word-order flexibility
-```
+### 1. One node_helper per module type, not per instance
 
-Fallback order: user module translation → user core translation → fallback module translation → fallback core translation → key itself.
+If two configs use the same module type, there is still only one helper. Helper
+broadcasts via `sendSocketNotification` reach **every** module instance. If you
+need to target one instance, include `this.identifier` in the payload from the
+frontend and filter on it in the helper / frontend.
 
-### In Nunjucks templates
+This project currently runs one instance, so we send `STATE` without filtering -
+but if multi-instance support is ever added, every helper -> module message must
+be tagged.
 
-```njk
-{{ "MY_KEY" | translate }}
-```
+### 2. Helper has no access to `config.js`
 
-### Custom Nunjucks filters
+The helper is initialised independently of any user config. The frontend must
+send the config via `sendSocketNotification("INIT", this.config)` in `start()`.
+This project does that in `src/frontend/Frontend.ts`.
 
-```javascript
-start: function() {
-  this.nunjucksEnvironment().addFilter("myFilter", function(str) {
-    return str.toUpperCase();
-  });
-}
-```
+Side effect: when the frontend reloads (browser refresh), `start()` runs again
+and `INIT` is sent again. The helper must guard against re-opening DB handles
+or re-scheduling cron - this project does that explicitly in
+`src/backend/Backend.ts`.
 
----
+### 3. Socket connection is lazy
 
-## 12. Logger
+The socket from module -> helper opens only after the first
+`sendSocketNotification` from the frontend. A helper that wants to push state
+on boot must wait for the frontend's first message before sending anything.
 
-A thin wrapper around the browser/Node `console.*` methods.
+### 4. `MM.getModules()` is empty before `ALL_MODULES_STARTED`
 
-### Frontend (browser context)
-Available globally as `Log` — no import needed.
+Do not call it in `start()`. Wait for the notification.
 
-```javascript
-Log.log("debug message");
-Log.info("informational");
-Log.warn("warning");
-Log.error("something went wrong");
-```
+### 5. `hide`/`show` no-op before `DOM_OBJECTS_CREATED`
 
-### Backend (node_helper)
-Must be explicitly required:
+Also: if a module has no `position` defined, it may have no DOM, and
+`suspend`/`resume` won't fire for it. Not an issue for this project (chores row
+has a position).
 
-```javascript
+### 6. Frontend `Log` is global; helper `Log` must be required
+
+```js
+// frontend
+Log.info("msg");
+// node_helper
 const Log = require("logger");
-Log.info("[MMM-Name] Helper started");
+Log.info("msg");
+```
+Frontend logs land in the Electron/browser devtools console, not the terminal
+that launched MagicMirror.
+
+### 7. Native modules need rebuild for Electron
+
+`better-sqlite3` is a native module. The `postinstall` script must run
+`@electron/rebuild` against MagicMirror's pinned Electron. See `package.json`
+in this repo - the script intentionally exits 0 with a warning when run outside
+a MagicMirror parent so test runs in a standalone clone don't break.
+
+### 8. `public/` requires a `node_helper.js`
+
+Files under `MMM-Name/public/` are served at `/MMM-Name/filename` only if
+`node_helper.js` exists. If you need static file serving but no helper logic,
+an empty stub is required:
+```js
+const NodeHelper = require("node_helper");
+module.exports = NodeHelper.create({});
 ```
 
-**Note:** Frontend logs appear in the **Electron/browser developer console**, not the
-terminal. Backend logs appear in the terminal where MagicMirror was launched.
+### 9. `start()` may be async (v2 docs)
+
+The upstream docs now note `start()` can be `async` or return a `Promise`. The
+core uses `Promise.allSettled` over all modules' `start()` results before
+proceeding to DOM creation. Useful when you must wait for custom elements or
+async resource registration.
+
+### 10. Best practice: use `new Date(Date.now())` not `new Date()`
+
+Upstream docs flag this in their general advice - lets debugging tooling
+override `Date.now`. Not a hard rule for this project, but if you write new
+date-handling code, follow it.
 
 ---
 
-## 13. Key Patterns for MMM-Chores-Alt
+## When the user asks "where is X in the SDK?"
 
-### Startup flow
+1. Check the **task -> doc mapping** above.
+2. If not found, grep the extracted files:
+   ```sh
+   rg -i "<keyword>" docs/magicmirror-sdk/
+   ```
+3. If still not found, search the live docs at <https://docs.magicmirror.builders/>
+   and the upstream repo `MagicMirrorOrg/MagicMirror-Documentation`.
+4. The forum at <https://forum.magicmirror.builders/> is the next-best source
+   for behaviours not covered in the docs (e.g. multi-instance notification
+   semantics). Treat forum answers as community knowledge - verify against code
+   in `MagicMirrorOrg/MagicMirror` before relying on them.
+
+---
+
+## Project-specific data-flow patterns
+
+These are documented here because they encode the contract between
+`src/frontend/` and `src/backend/` in this repo. Not part of the SDK; included
+for fast agent onboarding.
+
+### Boot
+
 ```text
-module start()
-  → sendSocketNotification("INIT", this.config)
-    → node_helper stores config, opens DB, schedules midnight reset
-      → sendSocketNotification("STATE", fullState)
-        → module stores state, updateDom()
+Frontend.start()
+  -> sendSocketNotification("INIT", this.config)
+    -> Backend opens DB, schedules midnight cron, builds state
+      -> sendSocketNotification("STATE", fullState)
+        -> Frontend stores state, updateDom()
 ```
 
-### User taps a chore
+### Tap a chore
+
 ```text
-DOM click handler
-  → sendSocketNotification("TOGGLE_CHORE", { childId, choreId, date })
-    → node_helper writes to DB
-      → sendSocketNotification("STATE", updatedState)
-        → module stores state, updateDom()
+Frontend chore-button click
+  -> sendSocketNotification("TOGGLE_CHORE", { childId, choreId })
+    -> Backend writes/deletes completion for today's date
+      -> sendSocketNotification("STATE", updatedState)
+        -> Frontend updateDom()
+```
+Backend determines the date (no `todayStr` from frontend).
+
+### Redeem tally
+
+```text
+Frontend "Redeem" button -> PIN modal (DOM-level)
+  -> sendSocketNotification("REDEEM", { childId, pin })
+    -> Backend verifies PIN (plain-text compare), writes redemption
+      -> sendSocketNotification("STATE", updatedState)
+        -> Frontend updateDom()
 ```
 
-### Parent redeems tally
-```text
-DOM "Redeem" button
-  → prompt for PIN (DOM-level)
-  → sendSocketNotification("REDEEM", { childId, pin })
-    → node_helper verifies PIN, writes redemption record, zeroes tally
-      → sendSocketNotification("STATE", updatedState)
-        → module stores state, updateDom()
-```
+### Midnight reset
 
-### Midnight reset (node_helper)
 ```text
-node-cron job fires at 00:00
-  → node_helper clears today's completions in DB
-  → sendSocketNotification("STATE", updatedState)
-    → module stores state, updateDom()
+node-cron 00:00
+  -> Backend rebuilds state (today's completions are now empty because date changed)
+    -> sendSocketNotification("STATE", updatedState)
+      -> Frontend updateDom()
 ```
+Completions are never deleted - the daily reset is implicit via the date change.
