@@ -67,9 +67,9 @@ MMM-Chores-Alt/
 │   │   ├── stateReactor.ts           ← pure (prev, next) → Effect[]
 │   │   └── icon.ts                   ← icon-type detection
 │   ├── backend/
-│   │   ├── index.ts                  ← Vite build entry: NodeHelper.create(createBackendSpec(...))
-│   │   ├── Backend.ts                ← createBackendSpec(deps) factory (DI seam)
-│   │   ├── repository.ts             ← IChoresRepository interface + ChoresRepository class
+│   │   ├── index.ts                  ← Vite build entry: constructs ChoresRepository, calls NodeHelper.create(createBackend(...))
+│   │   ├── Backend.ts                ← createBackend(deps) factory (DI seam)
+│   │   ├── repository.ts             ← ChoresRepository class
 │   │   ├── tally.ts                  ← computeTally pure function
 │   │   ├── stateBuilder.ts           ← buildStatePayload pure function
 │   │   └── dateUtils.ts              ← todayStr pure function
@@ -127,10 +127,11 @@ narrowly-scoped service modules**.
 
 ### 4.2 Service modules
 
-**`src/backend/repository.ts`** — interface `IChoresRepository` + class `ChoresRepository`.
+**`src/backend/repository.ts`** — class `ChoresRepository`.
 
 ```ts
-export interface IChoresRepository {
+export class ChoresRepository {
+  constructor(dbPath: string)               // opens DB, runs schema, prepares statements
   isOpen(): boolean
   close(): void
   insertCompletion(date: string, childId: string, choreId: string): boolean
@@ -140,21 +141,14 @@ export interface IChoresRepository {
   insertRedemption(childId: string, amount: number, redeemedAt: string): void
   getRedeemedTotal(childId: string): number
 }
-
-export class ChoresRepository implements IChoresRepository {
-  constructor(dbPath: string)               // opens DB, runs schema, prepares statements
-  /* implements all IChoresRepository methods */
-}
 ```
 
-The interface exists so `Backend.ts` can be parameterised on a `repositoryFactory:
-(path: string) => IChoresRepository` (see §4.3) without coupling the wrapper to the
-concrete class. Tests pass `() => new ChoresRepository(':memory:')` for real in-memory
-SQLite (no mocking).
+`Backend.ts` is parameterised on `repository: ChoresRepository` (see §4.3); production
+wires a real on-disk SQLite database in `src/backend/index.ts`, tests pass a
+`new ChoresRepository(':memory:')` for real in-memory SQLite (no mocking).
 
-`isOpen()` powers the re-INIT idempotence guard (see §5.4). It checks both that the
-`Database` object exists *and* that the underlying handle has not been `close()`d
-(`db.open === true` from better-sqlite3).
+`isOpen()` returns `db.open` from better-sqlite3 and is exercised by
+`repository.test.ts`.
 
 **`src/backend/tally.ts`** — pure function:
 
@@ -189,22 +183,26 @@ Produces the exact `STATE` payload shape that the current `sendState()` produces
 
 ### 4.3 Thin wrapper (`src/backend/Backend.ts`)
 
-The wrapper is exposed as a `createBackendSpec(deps)` factory that returns the
+The wrapper is exposed as a `createBackend(deps)` factory that returns the
 `NodeHelper.create` argument object. This is the **dependency-injection seam**: tests
-call `createBackendSpec(...)` directly with an in-memory repository factory and skip
-the `NodeHelper.create` indirection entirely. The module entry is a one-liner that
-wires up production defaults.
+call `createBackend(...)` directly with an in-memory `ChoresRepository` and skip the
+`NodeHelper.create` indirection entirely. The module entry is a small file that
+constructs the production repository and wires it in.
 
 ```ts
 export type BackendDeps = {
-  repositoryFactory: (path: string) => IChoresRepository
+  repository: ChoresRepository
   now?: () => Date                       // for deterministic date tests
+  cronSchedule?: (expr: string, handler: () => void) => CronHandle
 }
 
-export function createBackendSpec(deps: BackendDeps) {
+export function createBackend(deps: BackendDeps): Backend {
   return {
+    repository: deps.repository,
+    config: null,
+    cronJob: null,
     start() { /* nothing — wait for INIT */ },
-    stop() { this.cronJob?.stop(); this.repository?.close(); },
+    stop() { /* cronJob.stop(); repository.close(); */ },
     socketNotificationReceived(notif, payload) {
       switch (notif) {
         case SocketNotification.INIT:         return this.handleInit(payload)
@@ -212,31 +210,42 @@ export function createBackendSpec(deps: BackendDeps) {
         case SocketNotification.REDEEM:       return this.handleRedeem(payload)
       }
     },
-    handleInit(config) { /* see §5.4 — uses deps.repositoryFactory(dbPath) */ },
+    handleInit(config)  { /* store config, schedule cron, sendState */ },
     handleToggle({ childId, choreId }) { /* repo write + sendState */ },
-    handleRedeem({ childId, pin }) { /* PIN check + repo write + sendState */ },
+    handleRedeem({ childId, pin })     { /* PIN check + repo write + sendState */ },
     sendState() { /* gather, call buildStatePayload, sendSocketNotification */ },
   }
 }
 ```
 
+`Backend` (the exported spec type) declares `sendSocketNotification` as **optional**.
+Defining it as an own-property no-op on the spec would shadow NodeHelper's prototype
+method and silently drop every outgoing notification - leaving the field absent on the
+spec lets the prototype provide the real implementation. Tests assign their own
+`vi.fn()` to `spec.sendSocketNotification` after construction.
+
 Module entry (`src/backend/index.ts`, the actual Vite build entry):
 
 ```ts
 import NodeHelper from 'node_helper'
+import path from 'node:path'
 import { ChoresRepository } from './repository'
-import { createBackendSpec } from './Backend'
+import { createBackend } from './Backend'
 
 module.exports = NodeHelper.create(
-  createBackendSpec({ repositoryFactory: (p) => new ChoresRepository(p) })
+  createBackend({
+    repository: new ChoresRepository(path.join(__dirname, 'chores.db')),
+  })
 )
 ```
 
-The wrapper holds `this.repository`, `this.config`, `this.cronJob` on the spec object
-that `NodeHelper.create` consumes. Unit tests construct the spec via
-`createBackendSpec({ repositoryFactory: () => new ChoresRepository(':memory:') })`,
-attach a fake `sendSocketNotification` mock to the resulting object, then call
-`handleInit/handleToggle/handleRedeem` directly — see §12.6.
+The compiled `node_helper.js` is emitted into the module directory, so `__dirname`
+resolves to the same absolute path MagicMirror would set on `this.path` at runtime.
+
+Unit tests construct the spec via
+`createBackend({ repository: new ChoresRepository(':memory:') })`, attach a `vi.fn()`
+to `spec.sendSocketNotification`, then call `handleInit/handleToggle/handleRedeem`
+directly - see §12.6.
 
 ---
 
@@ -331,35 +340,24 @@ from the DOM) so the caller can fall back to a full `updateDom()`. Tests assert:
 
 ### 5.4 Re-INIT idempotence
 
-Current code:
-```js
-if (notification === "INIT") {
-  this.config = payload
-  if (!this.db) { this.initDatabase() }   // ← duck-type guard
-  this.scheduleMidnightReset()
-  this.sendState()
-}
-```
+The repository is constructed **once** in `src/backend/index.ts` and passed into
+`createBackend`. `handleInit` no longer opens or re-opens the DB; it just stores the
+new config, reschedules the midnight cron, and broadcasts STATE:
 
-New behaviour:
 ```ts
 handleInit(config: Config) {
   this.config = config
-  if (!this.repository || !this.repository.isOpen()) {
-    this.repository = new ChoresRepository(path.join(this.path, 'chores.db'))
-  }
   this.scheduleMidnightReset()   // .stop()s the previous schedule first
   this.sendState()
 }
 ```
 
-The decision to open a new DB is made via `repository.isOpen()`, which checks the
-underlying `better-sqlite3` `Database#open` flag. This survives:
-- a previous `repository.close()` call (e.g. from `stop()` followed by helper restart);
-- a `repository` field that was assigned but had its handle externally closed.
+Re-INIT is therefore idempotent by construction: the repository field always points
+at the same injected instance, so a second INIT cannot allocate a new SQLite handle.
+The frontend reloading (which re-fires INIT) is harmless.
 
-Cron is unconditionally rescheduled (existing job is `.stop()`d first), matching today's
-behaviour.
+Cron is unconditionally rescheduled (existing job is `.stop()`d first) so a config
+change at re-INIT does not leak schedules.
 
 ---
 
@@ -690,8 +688,8 @@ Each requirement is one behaviour, testable in isolation.
 | R3 | The compiled `node_helper.js` does **not** bundle `better-sqlite3`, `node-cron`, `node_helper`, or `logger`. |
 | R4 | `npm test` runs Vitest in `happy-dom` and exits 0 when all tests pass. |
 | R5 | `npm install` succeeds on macOS arm64, macOS x64, and Linux arm64 (RPi MagicMirror host). |
-| R6 | Sending `INIT` twice opens **one** SQLite handle. |
-| R7 | Sending `INIT` after the helper's `stop()` opens a fresh SQLite handle. |
+| R6 | The repository is constructed once at module load and reused for every INIT (no per-INIT allocation). |
+| R7 | _(retired)_ Re-INIT after `stop()` is not a supported flow; `stop()` runs on SIGINT before process exit. |
 | R8 | `ChoresRepository#isOpen()` returns `true` after construction and `false` after `close()`. |
 | R9 | `computeTally` returns 0 when total earned ≤ total redeemed (clamp). |
 | R10 | `computeTally` ignores rows for `chore_id`s no longer in config. |
@@ -738,20 +736,17 @@ And   ./node_helper.js DOES contain `require("better-sqlite3")` and
       `require("node-cron")` calls (externalised)
 ```
 
-### AC2 — Re-INIT idempotence (R6, R7, R8)
+### AC2 — Re-INIT idempotence (R6, R8)
 
 ```text
 Given a fresh helper instance
-When  I send INIT once
-Then  helper.repository.isOpen() === true
+When  the module loads
+Then  helper.repository is the injected ChoresRepository and isOpen() === true
 
 Given a helper that has received INIT once
 When  I send INIT again
 Then  helper.repository is the same object as before (===)
-
-Given a helper that has had stop() called
-When  I send INIT
-Then  helper.repository is a NEW instance whose isOpen() === true
+And   the first INIT triggered a STATE broadcast
 ```
 
 ### AC3 — TOGGLE_CHORE toggle (R12)
@@ -1012,12 +1007,12 @@ expect(snapshot.tallies).toEqual({ alice: 5, bob: 0 })
 
 ### 12.6 `Backend.test.ts`
 
-Constructs the spec via `createBackendSpec({ repositoryFactory: () =>
-new ChoresRepository(':memory:') })` (see §4.3), attaches a `vi.fn()` to
-`spec.sendSocketNotification`, then calls `spec.handleInit/handleToggle/handleRedeem`
-directly. The repository is **real** (in-memory SQLite) — no mocking of repository
-methods. This means AC3-AC6 are testable end-to-end at the socket-payload level
-without going through `NodeHelper.create`.
+Constructs the spec via `createBackend({ repository: new ChoresRepository(':memory:') })`
+(see §4.3), attaches a `vi.fn()` to `spec.sendSocketNotification`, then calls
+`spec.handleInit/handleToggle/handleRedeem` directly. The repository is **real**
+(in-memory SQLite) — no mocking of repository methods. This means AC3-AC6 are
+testable end-to-end at the socket-payload level without going through
+`NodeHelper.create`.
 
 ```ts
 const config: Config = {
@@ -1029,8 +1024,8 @@ const config: Config = {
   sounds:  { complete:null, undo:null },
 }
 
-const spec = createBackendSpec({
-  repositoryFactory: () => new ChoresRepository(':memory:'),
+const spec = createBackend({
+  repository: new ChoresRepository(':memory:'),
 })
 spec.path = '/tmp/test'                        // NodeHelper would normally set this
 spec.sendSocketNotification = vi.fn()
@@ -1098,6 +1093,11 @@ it('registers MMM-Chores-Alt with expected defaults', () => {
 11. **`AudioContext` in happy-dom** — undefined by default. Stub in `setup.ts` (see §7.3).
     If a test needs to assert a synth call, mock `playSynthChime` directly rather than
     introspecting Web Audio nodes.
+12. **Do not define `sendSocketNotification` on the spec** — `NodeHelper.create(spec)`
+    uses class-style extension, so any own-property on the spec shadows the same-named
+    method on NodeHelper's prototype. A no-op `sendSocketNotification: () => {}`
+    silently drops every outgoing notification. The `Backend` type declares it as
+    optional; the spec object omits it; tests assign a `vi.fn()` after construction.
 
 ---
 
@@ -1114,11 +1114,11 @@ it('registers MMM-Chores-Alt with expected defaults', () => {
 | Q7 | ESLint keeps the existing CSS plugin and adds `@typescript-eslint`. **No** `eslint-config-prettier`, **no** SARIF reporter. Confirmed. |
 | Q8 | **No Prettier** in this project. ESLint is the sole style enforcer. Confirmed. |
 | Q9 | Source-maps are committed; the legacy hand-written `MMM-Chores-Alt.js` is overwritten by the build. Confirmed. |
-| Q10 | **Constructor (factory) injection** for the backend. `Backend.ts` exports `createBackendSpec({ repositoryFactory })` returning the `NodeHelper.create` spec; the production entry `src/backend/index.ts` wires the real `ChoresRepository` factory; tests pass `() => new ChoresRepository(':memory:')`. No module-level mutable binding, no `__setForTest__` hook. |
-| Q11 | `Backend.test.ts` exercises a **real in-memory `ChoresRepository`** (not a mocked repository). Only `sendSocketNotification` is mocked. `repository.test.ts` covers the SQL surface in isolation. |
+| Q10 | **Constructor injection** for the backend. `Backend.ts` exports `createBackend({ repository })` returning the `NodeHelper.create` spec; the production entry `src/backend/index.ts` constructs `new ChoresRepository(path.join(__dirname, 'chores.db'))` and passes it in; tests pass `new ChoresRepository(':memory:')`. No module-level mutable binding, no factory indirection, no `__setForTest__` hook. |
+| Q11 | `Backend.test.ts` exercises a **real in-memory `ChoresRepository`** (not a mocked repository). Only `sendSocketNotification` is mocked (assigned post-construction; see pitfall §13.12). `repository.test.ts` covers the SQL surface in isolation. |
 | Q12 | `isStructurallySame` and `applyStateDiff` move out of `Frontend.ts` into `src/frontend/stateDiff.ts` and gain their own happy-dom test file. Required because they hold the animation-preserving in-place patch behaviour. |
 | Q13 | The `Frontend.ts` PIN modal state is unified into a single nullable `pinModalState: { childId, input, error } \| null`. `reducePin` operates on the `{ input, error }` slice; `childId` is carried alongside, not inside the reducer. |
-| Q14 | `repository.ts` exports an `IChoresRepository` interface alongside the concrete class. The factory parameter and any non-`repository.test.ts` consumer types against the interface. |
+| Q14 | `repository.ts` exports the concrete `ChoresRepository` class only. The earlier `IChoresRepository` interface was removed - there is one implementation and no test double, so the interface added no value. Consumers type against the class directly. |
 | Q15 | MagicMirror types come from `@types/magicmirror-module` (verified available on npm, v2.16.6). No locally-shipped ambient declarations. If the upstream package drifts, switch to a pinned local `.d.ts` (fallback path only — not the default). |
 | Q16 | The conversion lands in a **single atomic commit set on a feature branch**: scaffold `src/`, delete legacy hand-written `MMM-Chores-Alt.js` + `node_helper.js`, run the first `npm run build`, commit the new compiled artefacts at the same paths. No transitional `dist/` directory; no two-step swap. |
 | Q17 | `postinstall` is patched to gracefully skip (`exit 0` with warning) when `../../package.json` is absent, so a standalone clone for running unit tests does not fail `npm install`. Inside a MagicMirror tree, `@electron/rebuild` runs as today. |
