@@ -44,7 +44,11 @@ function deps(self: ModuleThis): DelightDeps {
     now: () => performance.now(),
     random: Math.random,
     audio: ensureAudio(self),
-    config: { delight: self.config.delight, sounds: self.config.sounds },
+    config: {
+      delight: self.config.delight,
+      sounds: self.config.sounds,
+      displayFormat: self.config.displayFormat,
+    },
   }
 }
 
@@ -89,6 +93,7 @@ Module.register("MMM-Chores-Alt", {
       allDoneCelebration: true,
     },
     sounds: { complete: null, undo: null },
+    displayFormat: { prefix: "", suffix: "pts" },
   },
 
   start(this: ModuleThis) {
@@ -123,7 +128,7 @@ Module.register("MMM-Chores-Alt", {
       self.pinModalState = { childId, input: "", error: null }
       self.updateDom()
     }
-    const wrapper = renderWrapper(self.state, onChoreClick, onRedeem)
+    const wrapper = renderWrapper(self.state, self.config.displayFormat, onChoreClick, onRedeem)
     if (self.pinModalState && self.state) {
       const child = self.state.children.find(c => c.id === self.pinModalState!.childId)
       const name = child?.name ?? ""
@@ -160,7 +165,7 @@ Module.register("MMM-Chores-Alt", {
       if (!inPinModal) this.pinModalState = null
       if (canDiff) {
         const wrapper = document.querySelector(".MMM-Chores-Alt")
-        if (wrapper) applyStateDiff(wrapper, next)
+        if (wrapper) applyStateDiff(wrapper, next, this.config.displayFormat)
       } else {
         this.updateDom()
       }

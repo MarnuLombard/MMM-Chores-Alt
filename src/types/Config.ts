@@ -24,9 +24,15 @@ export type SoundsConfig = {
   undo: string | null
 }
 
+export type DisplayFormat = {
+  prefix: string
+  suffix: string
+}
+
 export type Config = {
   children: ChildConfig[]
   parentPin: string
   delight: DelightConfig
   sounds: SoundsConfig
+  displayFormat: DisplayFormat
 }

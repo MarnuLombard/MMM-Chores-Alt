@@ -1,5 +1,6 @@
-import type { DelightConfig, SoundsConfig } from "../types/Config"
+import type { DelightConfig, DisplayFormat, SoundsConfig } from "../types/Config"
 import type { ChildState } from "../types/State"
+import { formatTally } from "./formatTally"
 
 export type DelightAudio = {
   currentTime: number
@@ -29,7 +30,7 @@ export type DelightDeps = {
   now: () => number
   random: () => number
   audio: DelightAudio | null
-  config: { delight: DelightConfig, sounds: SoundsConfig }
+  config: { delight: DelightConfig, sounds: SoundsConfig, displayFormat: DisplayFormat }
   AudioCtor?: typeof Audio
 }
 
@@ -148,7 +149,7 @@ export function bumpTally(deps: DelightDeps, childId: string, delta: number): vo
     const rect = tallyEl.getBoundingClientRect()
     const float = deps.doc.createElement("span")
     float.className = "tally-float"
-    float.textContent = `+${delta}`
+    float.textContent = `+${formatTally(delta, deps.config.displayFormat)}`
     float.style.left = `${rect.left + rect.width / 2 - 12}px`
     float.style.top = `${rect.top - 8}px`
     float.addEventListener("animationend", () => float.remove())

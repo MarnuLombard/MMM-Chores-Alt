@@ -39,6 +39,7 @@ function makeDeps(overrides: Partial<DelightDeps> = {}): DelightDeps {
     config: {
       delight: { sound: true, confetti: true, tallyBump: true, allDoneCelebration: true },
       sounds: { complete: null, undo: null },
+      displayFormat: { prefix: "", suffix: "pts" },
     },
     ...overrides,
   }
@@ -52,6 +53,7 @@ describe("triggerConfetti (R28)", () => {
       config: {
         delight: { sound: true, confetti: false, tallyBump: true, allDoneCelebration: true },
         sounds: { complete: null, undo: null },
+        displayFormat: { prefix: "", suffix: "pts" },
       },
     })
     const target = document.createElement("div")
@@ -77,6 +79,7 @@ describe("playChime (R31)", () => {
       config: {
         delight: { sound: false, confetti: true, tallyBump: true, allDoneCelebration: true },
         sounds: { complete: null, undo: null },
+        displayFormat: { prefix: "", suffix: "pts" },
       },
     })
     expect(playChime(deps, "complete")).toBe("skip")
@@ -94,6 +97,7 @@ describe("playChime (R31)", () => {
       config: {
         delight: { sound: true, confetti: true, tallyBump: true, allDoneCelebration: true },
         sounds: { complete: "/tmp/x.wav", undo: null },
+        displayFormat: { prefix: "", suffix: "pts" },
       },
       AudioCtor: FakeAudio as unknown as typeof Audio,
     })
@@ -123,13 +127,26 @@ function setupSection(childId: string): HTMLElement {
 describe("bumpTally (R29)", () => {
   beforeEach(() => { document.body.innerHTML = "" })
 
-  it("positive delta: adds 'bumping' class and creates +N float", () => {
+  it("positive delta: adds 'bumping' class and creates +N float with configured suffix", () => {
     setupSection("alice")
     const deps = makeDeps()
     bumpTally(deps, "alice", 2)
     const tally = document.querySelector(".child-tally")!
     expect(tally.classList.contains("bumping")).toBe(true)
-    expect(document.body.querySelector(".tally-float")!.textContent).toBe("+2")
+    expect(document.body.querySelector(".tally-float")!.textContent).toBe("+2pts")
+  })
+
+  it("positive fractional delta formats with currency prefix and 2dp", () => {
+    setupSection("alice")
+    const deps = makeDeps({
+      config: {
+        delight: { sound: true, confetti: true, tallyBump: true, allDoneCelebration: true },
+        sounds: { complete: null, undo: null },
+        displayFormat: { prefix: "$", suffix: "" },
+      },
+    })
+    bumpTally(deps, "alice", 0.1)
+    expect(document.body.querySelector(".tally-float")!.textContent).toBe("+$0.10")
   })
 
   it("negative delta: adds 'dimming' class, no float element", () => {

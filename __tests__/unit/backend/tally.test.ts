@@ -62,4 +62,25 @@ describe("computeTally", () => {
   it("returns 0 for unknown child", () => {
     expect(computeTally("charlie", [child], [], 0)).toBe(0)
   })
+
+  it("supports fractional points and redemptions", () => {
+    const pocketMoney: ChildConfig = {
+      id: "alice",
+      name: "Alice",
+      chores: [
+        { id: "bed", icon: "🛏️", points: 0.1 },
+        { id: "teeth", icon: "🦷", points: 0.25 },
+      ],
+    }
+    const result = computeTally(
+      "alice",
+      [pocketMoney],
+      [
+        { childId: "alice", choreId: "bed", count: 3 },
+        { childId: "alice", choreId: "teeth", count: 2 },
+      ],
+      0.3
+    )
+    expect(result).toBeCloseTo(0.5, 10)
+  })
 })

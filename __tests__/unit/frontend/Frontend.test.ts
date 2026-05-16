@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeAll } from "vitest"
 
 type ModuleImpl = {
-  defaults: { parentPin: string, delight: { sound: boolean } }
+  defaults: {
+    parentPin: string,
+    delight: { sound: boolean },
+    displayFormat: { prefix: string, suffix: string },
+  }
   start: () => void
   getStyles: () => string[]
   file?: (name: string) => string
@@ -28,6 +32,11 @@ describe("Frontend registration (AC10, R23)", () => {
   it("defaults.delight.sound === true", () => {
     const impl = registerMock.mock.calls.find(c => c[0] === "MMM-Chores-Alt")![1] as ModuleImpl
     expect(impl.defaults.delight.sound).toBe(true)
+  })
+
+  it("defaults.displayFormat === {prefix:'', suffix:'pts'}", () => {
+    const impl = registerMock.mock.calls.find(c => c[0] === "MMM-Chores-Alt")![1] as ModuleImpl
+    expect(impl.defaults.displayFormat).toEqual({ prefix: "", suffix: "pts" })
   })
 
   it("typeof impl.start === 'function'", () => {

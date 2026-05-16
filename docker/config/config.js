@@ -17,17 +17,18 @@ let config = {
       position: "fullscreen_below",
       config: {
         parentPin: "1234",
+        displayFormat: { prefix: "€", suffix: "" },
         children: [
           {
             id: "alice",
             name: "Alice",
             color: "#ff6b6b",
             chores: [
-              { id: "make-bed",    label: "Make Bed",    icon: "🛏️", points: 1 },
-              { id: "brush-teeth", label: "Brush Teeth", icon: "🦷",       points: 1 },
-              { id: "get-dressed", label: "Get Dressed", icon: "👕",       points: 1 },
-              { id: "tidy-room",   label: "Tidy Room",   icon: "🧹",       points: 2 },
-              { id: "homework",    label: "Homework",    icon: "📚",       points: 3 },
+              { id: "make-bed", label: "Make Bed", icon: "🛏️", points: 0.1 },
+              { id: "brush-teeth", label: "Brush Teeth", icon: "🦷", points: 0.1 },
+              { id: "get-dressed", label: "Get Dressed", icon: "👕", points: 0.1 },
+              { id: "tidy-room", label: "Tidy Room", icon: "🧹", points: 0.2 },
+              { id: "homework", label: "Homework", icon: "📚", points: 0.3 },
             ],
           },
           {
@@ -35,10 +36,10 @@ let config = {
             name: "Bob",
             color: "#4ecdc4",
             chores: [
-              { id: "make-bed",    label: "Make Bed",    icon: "🛏️", points: 1 },
-              { id: "brush-teeth", label: "Brush Teeth", icon: "🦷",       points: 1 },
-              { id: "tidy-room",   label: "Tidy Room",   icon: "🧹",       points: 2 },
-              { id: "homework",    label: "Homework",    icon: "📚",       points: 3 },
+              { id: "make-bed", label: "Make Bed", icon: "🛏️", points: 1 },
+              { id: "brush-teeth", label: "Brush Teeth", icon: "🦷", points: 1 },
+              { id: "tidy-room", label: "Tidy Room", icon: "🧹", points: 2 },
+              { id: "homework", label: "Homework", icon: "📚", points: 3 },
             ],
           },
         ],

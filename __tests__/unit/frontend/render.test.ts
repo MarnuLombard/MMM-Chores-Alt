@@ -5,11 +5,14 @@ import {
   renderChoreButton,
   renderPinModal,
 } from "../../../src/frontend/render"
+import type { DisplayFormat } from "../../../src/types/Config"
 import type { ChildState, ChoreState, StatePayload } from "../../../src/types/State"
+
+const ptsFormat: DisplayFormat = { prefix: "", suffix: "pts" }
 
 describe("renderWrapper", () => {
   it("renders a loading element when state is null", () => {
-    const w = renderWrapper(null, vi.fn(), vi.fn())
+    const w = renderWrapper(null, ptsFormat, vi.fn(), vi.fn())
     expect(w.classList.contains("MMM-Chores-Alt")).toBe(true)
     expect(w.querySelector(".chores-loading")).not.toBeNull()
   })
@@ -21,7 +24,7 @@ describe("renderWrapper", () => {
         { id: "bob", name: "Bob", tally: 0, chores: [] },
       ],
     }
-    const w = renderWrapper(state, vi.fn(), vi.fn())
+    const w = renderWrapper(state, ptsFormat, vi.fn(), vi.fn())
     expect(w.querySelectorAll(".child-section").length).toBe(2)
   })
 })
@@ -37,7 +40,7 @@ describe("renderChildSection", () => {
     }
     const onChore = vi.fn()
     const onRedeem = vi.fn()
-    const section = renderChildSection(child, onChore, onRedeem)
+    const section = renderChildSection(child, ptsFormat, onChore, onRedeem)
     expect(section.classList.contains("child-section")).toBe(true)
     expect(section.dataset.childId).toBe("alice")
     expect(section.querySelector(".child-name")!.textContent).toBe("Alice")
@@ -46,6 +49,20 @@ describe("renderChildSection", () => {
     const redeem = section.querySelector(".redeem-button") as HTMLButtonElement
     redeem.click()
     expect(onRedeem).toHaveBeenCalledWith("alice")
+  })
+
+  it("renders tally using configured currency prefix and 2dp", () => {
+    const child: ChildState = {
+      id: "alice", name: "Alice", tally: 1.5,
+      chores: [{ id: "bed", icon: "🛏️", points: 0.1, done: false }],
+    }
+    const section = renderChildSection(
+      child,
+      { prefix: "$", suffix: "" },
+      vi.fn(),
+      vi.fn()
+    )
+    expect(section.querySelector(".child-tally")!.textContent).toBe("$1.50")
   })
 })
 

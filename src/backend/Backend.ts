@@ -68,7 +68,10 @@ export function createBackend(deps: BackendDeps): Backend {
     },
 
     handleInit(config: Config) {
-      this.config = config
+      this.config = {
+        ...config,
+        displayFormat: config.displayFormat ?? { prefix: "", suffix: "pts" },
+      }
       this.scheduleMidnightReset()
       this.sendState()
     },

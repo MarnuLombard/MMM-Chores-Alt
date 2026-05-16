@@ -1,4 +1,6 @@
+import type { DisplayFormat } from "../types/Config"
 import type { StatePayload } from "../types/State"
+import { formatTally } from "./formatTally"
 
 export function isStructurallySame(prev: StatePayload | null, next: StatePayload): boolean {
   if (!prev) return false
@@ -15,7 +17,7 @@ export function isStructurallySame(prev: StatePayload | null, next: StatePayload
   return true
 }
 
-export function applyStateDiff(root: Element, next: StatePayload): boolean {
+export function applyStateDiff(root: Element, next: StatePayload, format: DisplayFormat): boolean {
   for (const child of next.children) {
     const section = root.querySelector(
       `.child-section[data-child-id="${CSS.escape(child.id)}"]`
@@ -44,7 +46,7 @@ export function applyStateDiff(root: Element, next: StatePayload): boolean {
     }
 
     const tallyEl = section.querySelector(".child-tally")
-    if (tallyEl) tallyEl.textContent = `${child.tally}pts`
+    if (tallyEl) tallyEl.textContent = formatTally(child.tally, format)
   }
   return true
 }

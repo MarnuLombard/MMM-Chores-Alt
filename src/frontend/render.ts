@@ -1,4 +1,6 @@
+import type { DisplayFormat } from "../types/Config"
 import type { ChildState, ChoreState, StatePayload } from "../types/State"
+import { formatTally } from "./formatTally"
 import { isImageIcon } from "./icon"
 
 export type ChoreHandler = (childId: string, choreId: string) => void
@@ -8,6 +10,7 @@ export type CancelHandler = () => void
 
 export function renderWrapper(
   state: StatePayload | null,
+  format: DisplayFormat,
   onChoreClick: ChoreHandler,
   onRedeem: RedeemHandler
 ): HTMLElement {
@@ -23,7 +26,7 @@ export function renderWrapper(
   const row = document.createElement("div")
   row.className = "chores-row"
   for (const child of state.children) {
-    row.appendChild(renderChildSection(child, onChoreClick, onRedeem))
+    row.appendChild(renderChildSection(child, format, onChoreClick, onRedeem))
   }
   wrapper.appendChild(row)
   return wrapper
@@ -31,6 +34,7 @@ export function renderWrapper(
 
 export function renderChildSection(
   child: ChildState,
+  format: DisplayFormat,
   onChoreClick: ChoreHandler,
   onRedeem: RedeemHandler
 ): HTMLElement {
@@ -50,7 +54,7 @@ export function renderChildSection(
 
   const tally = document.createElement("span")
   tally.className = "child-tally"
-  tally.textContent = `${child.tally}pts`
+  tally.textContent = formatTally(child.tally, format)
   section.appendChild(tally)
 
   const redeemBtn = document.createElement("button")

@@ -42,6 +42,16 @@ otherwise render as a text node (emoji or plain text).
 - Tap a chore to toggle complete ↔ incomplete (accidental taps are reversible)
 - Tally updates in real time on each toggle
 
+### Tally Display Format
+- `displayFormat: { prefix: string, suffix: string }` on the module config
+- Default: `{ prefix: "", suffix: "pts" }` (e.g. `15pts`)
+- For pocket-money mode: `{ prefix: "$", suffix: "" }` paired with fractional
+  `points` values like `0.10` per chore (e.g. `$1.50`)
+- Decimals auto-detected: integer tallies render plain, fractional tallies
+  render with 2dp (and 2dp rounding tames `0.1 + 0.2 = 0.30000000000000004`)
+- Storage: `redemptions.amount` is `REAL`, so decimal redemption amounts
+  round-trip exactly
+
 ### Daily Reset
 - node_helper runs a cron job at midnight: clears today's completions
 - Cumulative tally is **preserved** across resets; only per-day completion status clears

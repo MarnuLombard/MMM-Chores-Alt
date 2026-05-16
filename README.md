@@ -48,6 +48,7 @@ Add the module to the `modules` array in `config/config.js`:
   position: "fullscreen_below",
   config: {
     parentPin: "1234",
+    displayFormat: { prefix: "", suffix: "pts" },
     children: [
       {
         id: "child1",
@@ -82,10 +83,46 @@ Add the module to the `modules` array in `config/config.js`:
 
 ## Configuration options
 
-| Option      | Type   | Default  | Description                              |
-|-------------|--------|----------|------------------------------------------|
-| `children`  | Array  | `[]`     | List of child objects (see schema below) |
-| `parentPin` | String | `"0000"` | PIN required to redeem a child's tally   |
+| Option          | Type   | Default                          | Description                                              |
+|-----------------|--------|----------------------------------|----------------------------------------------------------|
+| `children`      | Array  | `[]`                             | List of child objects (see schema below)                 |
+| `parentPin`     | String | `"0000"`                         | PIN required to redeem a child's tally                   |
+| `displayFormat` | Object | `{ prefix: "", suffix: "pts" }`  | Wraps the rendered tally (see Display format below)      |
+
+### Display format
+
+`displayFormat` controls how the running tally is rendered. It has two
+fields:
+
+| Field    | Type   | Description                                |
+|----------|--------|--------------------------------------------|
+| `prefix` | String | Text rendered before the number (e.g. `$`) |
+| `suffix` | String | Text rendered after the number (e.g. `pts`)|
+
+The number itself is auto-formatted: integer values render plain (`15`),
+fractional values render with 2 decimal places (`1.50`). 2dp rounding also
+suppresses floating-point artefacts like `0.1 + 0.2 = 0.30000000000000004`.
+
+Default (points):
+
+```js
+displayFormat: { prefix: "", suffix: "pts" }
+// renders "15pts"
+```
+
+Pocket-money mode (use fractional `points` per chore):
+
+```js
+displayFormat: { prefix: "$", suffix: "" },
+children: [{
+  id: "child1", name: "Alice",
+  chores: [
+    { id: "make-bed", label: "Make Bed", icon: "🛏️", points: 0.10 },
+    { id: "homework", label: "Homework", icon: "📚", points: 0.50 },
+  ],
+}]
+// renders "$1.50"
+```
 
 ### Child object schema
 

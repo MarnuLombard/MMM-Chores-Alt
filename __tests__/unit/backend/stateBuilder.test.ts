@@ -22,6 +22,7 @@ const config: Config = {
   ],
   delight: { sound: true, confetti: true, tallyBump: true, allDoneCelebration: true },
   sounds: { complete: null, undo: null },
+  displayFormat: { prefix: "", suffix: "pts" },
 }
 
 describe("buildStatePayload", () => {

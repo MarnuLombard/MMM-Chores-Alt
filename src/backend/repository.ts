@@ -28,7 +28,7 @@ export class ChoresRepository {
       CREATE TABLE IF NOT EXISTS redemptions (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
         child_id    TEXT    NOT NULL,
-        amount      INTEGER NOT NULL,
+        amount      REAL    NOT NULL,
         redeemed_at TEXT    NOT NULL
       )
     `)

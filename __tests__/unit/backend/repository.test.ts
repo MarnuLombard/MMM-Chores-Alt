@@ -51,6 +51,14 @@ describe("ChoresRepository", () => {
     repo.close()
   })
 
+  it("stores fractional redemption amounts (REAL column)", () => {
+    const repo = new ChoresRepository(":memory:")
+    repo.insertRedemption("alice", 1.5, "2026-05-09T12:00:00.000Z")
+    repo.insertRedemption("alice", 0.3, "2026-05-10T12:00:00.000Z")
+    expect(repo.getRedeemedTotal("alice")).toBeCloseTo(1.8, 10)
+    repo.close()
+  })
+
   it("isOpen() returns false after close()", () => {
     const repo = new ChoresRepository(":memory:")
     repo.close()

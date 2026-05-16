@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { isStructurallySame, applyStateDiff } from "../../../src/frontend/stateDiff"
+import type { DisplayFormat } from "../../../src/types/Config"
 import type { StatePayload } from "../../../src/types/State"
+
+const ptsFormat: DisplayFormat = { prefix: "", suffix: "pts" }
 
 function buildDom(state: StatePayload): HTMLElement {
   const root = document.createElement("div")
@@ -96,12 +99,24 @@ describe("applyStateDiff (R33, R34)", () => {
     const next: StatePayload = { children: [{ id: "alice", name: "A", tally: 1, chores: [
       { id: "bed", icon: "x", points: 1, done: true },
     ] }] }
-    const result = applyStateDiff(root, next)
+    const result = applyStateDiff(root, next, ptsFormat)
     expect(result).toBe(true)
     const btn = root.querySelector(".chore-button[data-chore-id='bed']")!
     expect(btn.classList.contains("done")).toBe(true)
     expect(btn.querySelector(".chore-done-badge")).not.toBeNull()
     expect(root.querySelector(".child-tally")!.textContent).toBe("1pts")
+  })
+
+  it("formats tally with configured prefix/suffix and 2dp for fractional values", () => {
+    const prev: StatePayload = { children: [{ id: "alice", name: "A", tally: 0, chores: [
+      { id: "bed", icon: "x", points: 0.1, done: false },
+    ] }] }
+    const root = buildDom(prev)
+    const next: StatePayload = { children: [{ id: "alice", name: "A", tally: 1.5, chores: [
+      { id: "bed", icon: "x", points: 0.1, done: true },
+    ] }] }
+    applyStateDiff(root, next, { prefix: "$", suffix: "" })
+    expect(root.querySelector(".child-tally")!.textContent).toBe("$1.50")
   })
 
   it("removes done class and badge when chore.done becomes false", () => {
@@ -112,7 +127,7 @@ describe("applyStateDiff (R33, R34)", () => {
     const next: StatePayload = { children: [{ id: "alice", name: "A", tally: 0, chores: [
       { id: "bed", icon: "x", points: 1, done: false },
     ] }] }
-    applyStateDiff(root, next)
+    applyStateDiff(root, next, ptsFormat)
     const btn = root.querySelector(".chore-button[data-chore-id='bed']")!
     expect(btn.classList.contains("done")).toBe(false)
     expect(btn.querySelector(".chore-done-badge")).toBeNull()
@@ -122,6 +137,6 @@ describe("applyStateDiff (R33, R34)", () => {
     const root = document.createElement("div")
     document.body.appendChild(root)
     const next: StatePayload = { children: [{ id: "alice", name: "A", tally: 0, chores: [] }] }
-    expect(applyStateDiff(root, next)).toBe(false)
+    expect(applyStateDiff(root, next, ptsFormat)).toBe(false)
   })
 })
