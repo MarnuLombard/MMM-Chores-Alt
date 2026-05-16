@@ -13,7 +13,7 @@ Chore buttons with live point tally per child:
 
 Parent-PIN redemption modal:
 
-![Redemption modal with numeric keypad for entering parent PIN](docs/images/redeem-modal.png)
+<img alt="Redemption modal with numeric keypad for entering parent PIN" src="https://github.com/MarnuLombard/MMM-Chores-Alt/blob/main/docs/images/redeem-modal.png" width="400px">
 
 ## Installation
 
