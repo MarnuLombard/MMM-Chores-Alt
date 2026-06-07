@@ -148,7 +148,7 @@ handleVerifyPin(payload):
 handleAdjust(payload):
   if pin !== config.parentPin -> REDEEM_FAILED wrong_pin
   if !(amount > 0) -> ignore (defensive; FE should prevent)
-  amount = round2(amount)
+  amount = roundAmount(amount)
   repository.insertRedemption(childId, -amount, now().toISOString())
   sendState()
 
@@ -156,14 +156,15 @@ handleRedeem(payload):    // signature changed
   if pin !== config.parentPin -> REDEEM_FAILED wrong_pin
   tally = computeTally(...)
   if tally <= 0 -> REDEEM_FAILED no_points
-  amount = round2(payload.amount)
+  amount = roundAmount(payload.amount)
   if !(amount > 0) -> REDEEM_FAILED no_points
   if amount > tally -> REDEEM_FAILED insufficient
   repository.insertRedemption(childId, +amount, now().toISOString())
   sendState()
 ```
 
-`round2(x) = Math.round(x * 100) / 100`.
+`roundAmount(x) = Math.round(x * 100) / 100`. Matches the frontend `parseAmount`
+rounding rule so the FE and BE always see the same number for a given input.
 
 ### `repository.ts`
 
@@ -405,7 +406,7 @@ Work outside-in, one slice at a time:
 
 ### Pitfalls
 
-- **Floating point**: always pass amounts through `round2` on the backend before insert; `parseAmount` rounds on the frontend. Tests must cover `0.1 + 0.2`.
+- **Floating point**: always pass amounts through `roundAmount` on the backend before insert; `parseAmount` rounds on the frontend. Tests must cover `0.1 + 0.2`.
 - **Modal re-renders**: keep direct DOM manipulation for phase transitions and key feedback. A full `updateDom()` would lose in-progress input.
 - **STATE during modal**: if `STATE` lands while the modal is open (midnight cron, another tab), do not close the modal. Preserve the existing `inPinModal` guard logic in the new phase-aware modal.
 - **PIN re-verification**: do not skip the PIN check on `REDEEM`/`ADJUST` even after `PIN_VERIFIED`. No sessions.

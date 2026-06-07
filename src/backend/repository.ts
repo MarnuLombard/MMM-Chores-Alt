@@ -81,6 +81,10 @@ export class ChoresRepository {
     return rows.map(r => ({ childId: r.child_id, choreId: r.chore_id, count: r.cnt }))
   }
 
+  // Signed-amount convention: positive amount = redemption (lowers tally),
+  // negative amount = manual adjustment (raises tally). Sharing one table
+  // keeps `computeTally`'s `earned - SUM(amount)` correct without a schema
+  // migration; `redeemed_at` now covers adjustment timestamps too.
   insertRedemption(childId: string, amount: number, redeemedAt: string): void {
     this.stmts.insertRedemption.run(childId, amount, redeemedAt)
   }

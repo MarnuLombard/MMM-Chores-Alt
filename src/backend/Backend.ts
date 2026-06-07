@@ -1,7 +1,11 @@
 import cron from "node-cron";
 import type { ChoresRepository } from "./repository";
 import type { Config } from "../types/Config";
-import { SocketNotification } from "../constants/SocketNotifications";
+import {
+  SocketNotification,
+  type VerifyPinPayload,
+  type AdjustPayload,
+} from "../constants/SocketNotifications";
 import { buildStatePayload } from "./stateBuilder";
 import { todayStr } from "./dateUtils";
 import { computeTally } from "./tally";
@@ -30,9 +34,48 @@ export type Backend = {
   handleInit: (config: Config) => void
   handleToggle: (payload: TogglePayload) => void
   handleRedeem: (payload: RedeemPayload) => void
+  handleVerifyPin: (payload: VerifyPinPayload) => void
+  handleAdjust: (payload: AdjustPayload) => void
   sendState: () => void
   sendSocketNotification?: (notification: string, payload: unknown) => void
   scheduleMidnightReset: () => void
+}
+
+function roundAmount(x: number): number {
+  return Math.round(x * 100) / 100
+}
+
+function isObject(p: unknown): p is Record<string, unknown> {
+  return typeof p === "object" && p !== null
+}
+
+function isConfig(p: unknown): p is Config {
+  return isObject(p) && typeof p.parentPin === "string" && Array.isArray(p.children)
+}
+
+function isTogglePayload(p: unknown): p is TogglePayload {
+  return isObject(p) && typeof p.childId === "string" && typeof p.choreId === "string"
+}
+
+function isRedeemPayload(p: unknown): p is RedeemPayload {
+  return isObject(p)
+    && typeof p.childId === "string"
+    && typeof p.pin === "string"
+    && typeof p.amount === "number"
+}
+
+function isVerifyPinPayload(p: unknown): p is VerifyPinPayload {
+  return isObject(p)
+    && typeof p.childId === "string"
+    && typeof p.pin === "string"
+    && (p.intent === "redeem" || p.intent === "adjust")
+}
+
+function isAdjustPayload(p: unknown): p is AdjustPayload {
+  return isObject(p)
+    && typeof p.childId === "string"
+    && typeof p.pin === "string"
+    && typeof p.amount === "number"
 }
 
 export function createBackend(deps: BackendDeps): Backend {
@@ -59,11 +102,20 @@ export function createBackend(deps: BackendDeps): Backend {
     socketNotificationReceived(notif: string, payload: unknown) {
       switch (notif) {
         case SocketNotification.INIT:
-          return this.handleInit(<Config> payload)
+          if (isConfig(payload)) this.handleInit(payload)
+          return
         case SocketNotification.TOGGLE_CHORE:
-          return this.handleToggle(<TogglePayload> payload)
+          if (isTogglePayload(payload)) this.handleToggle(payload)
+          return
         case SocketNotification.REDEEM:
-          return this.handleRedeem(<RedeemPayload> payload)
+          if (isRedeemPayload(payload)) this.handleRedeem(payload)
+          return
+        case SocketNotification.VERIFY_PIN:
+          if (isVerifyPinPayload(payload)) this.handleVerifyPin(payload)
+          return
+        case SocketNotification.ADJUST:
+          if (isAdjustPayload(payload)) this.handleAdjust(payload)
+          return
       }
     },
 
@@ -82,6 +134,32 @@ export function createBackend(deps: BackendDeps): Backend {
       if (!inserted) {
         this.repository.deleteCompletion(date, payload.childId, payload.choreId)
       }
+      this.sendState()
+    },
+
+    handleVerifyPin(payload) {
+      if (!this.config) return
+      const { childId, pin, intent } = payload
+      if (pin !== this.config.parentPin) {
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "wrong_pin" })
+        return
+      }
+      const all = this.repository.getAllCompletions()
+      const redeemed = this.repository.getRedeemedTotal(childId)
+      const tally = computeTally(childId, this.config.children, all, redeemed)
+      this.sendSocketNotification?.(SocketNotification.PIN_VERIFIED, { childId, intent, tally })
+    },
+
+    handleAdjust(payload) {
+      if (!this.config) return
+      const { childId, pin } = payload
+      if (pin !== this.config.parentPin) {
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "wrong_pin" })
+        return
+      }
+      const amount = roundAmount(payload.amount)
+      if (!(amount > 0)) return
+      this.repository.insertRedemption(childId, -amount, now().toISOString())
       this.sendState()
     },
 
