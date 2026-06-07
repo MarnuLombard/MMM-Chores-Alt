@@ -344,7 +344,7 @@ type receive the same notifications.
 
 **Note 2:** The socket connection is established as soon as the module sends its
 first message using
-[sendSocketNotification](#this-sendsocketnotification-notification-payload).
+[sendSocketNotification](https://docs.magicmirror.builders/module-development/core-module-file.html#this-sendsocketnotification-notification-payload).
 
 **Example:**
 
@@ -446,7 +446,7 @@ this.updateDom({
 If you want to send a notification to all other modules, use the
 `sendNotification(notification, payload)`. All other modules will receive the
 message via the
-[notificationReceived](#notificationreceived-notification-payload-sender)
+[notificationReceived](https://docs.magicmirror.builders/module-development/core-module-file.html#notificationreceived-notification-payload-sender)
 method. In that case, the sender is automatically set to the instance calling
 the sendNotification method.
 
@@ -507,7 +507,7 @@ Possible configurable options:
   module),the callback will not be called.<br>
 - If the dom is not yet created, the hide method won't work. Wait for the
   `DOM_OBJECTS_CREATED`
-  [notification](#notificationreceived-notification-payload-sender).<br>
+  [notification](https://docs.magicmirror.builders/module-development/core-module-file.html#notificationreceived-notification-payload-sender).<br>
 - If an `animateOut` is defined in global module configuration, `animate` string
   will be ignored
 
@@ -550,7 +550,7 @@ Possible configurable options:
   module), the callback will not be called.<br>
 - If the dom is not yet created, the show method won't work. Wait for the
   `DOM_OBJECTS_CREATED`
-  [notification](#notificationreceived-notification-payload-sender).<br>
+  [notification](https://docs.magicmirror.builders/module-development/core-module-file.html#notificationreceived-notification-payload-sender).<br>
 - If an `animateIn` is defined in global module configuration, `animate` string
   will be ignored
 

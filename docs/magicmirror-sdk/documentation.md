@@ -17,7 +17,7 @@ It's in no way meant to be exhaustive, but it will try to make sure to relieve
 your github issues from excessive novice questions and in addition makes it much
 easier to post good and useful answers.
 
-### The most important points in writing software installation documentation:
+## The most important points in writing software installation documentation
 
 - **Don't assume any previous knowledge!** This is by far, the number one
   documentation issue and failure!
@@ -53,4 +53,4 @@ easier to post good and useful answers.
 
 ---
 
-### And always remember: IF YOU WRITE IT GOOD, THEY WILL COME!
+## And always remember: IF YOU WRITE IT GOOD, THEY WILL COME!

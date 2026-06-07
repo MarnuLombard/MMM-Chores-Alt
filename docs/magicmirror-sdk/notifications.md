@@ -2,7 +2,7 @@
 title: Notifications
 ---
 
-# Introduction
+## Introduction
 
 The MagicMirror core has the ability to send notifications to modules. Or even
 better: the modules have the possibility to send notifications to other modules.
@@ -13,7 +13,7 @@ Additional technical information on the notifications can be found in the
 - [notificationReceived](/module-development/core-module-file#notificationreceived-notification-payload-sender)
 - [sendNotification](/module-development/core-module-file#module-instance-methods)
 
-# System notifications
+## System notifications
 
 The system sends three notifications when starting up:
 
@@ -24,7 +24,7 @@ The system sends three notifications when starting up:
 | `MODULE_DOM_CREATED`  | _none_  | This module's dom has been fully loaded. You can now access your module's dom objects.                                                                                                                                                           |
 | `MODULE_DOM_UPDATED`  | _none_  | This module's dom has been updated and re-rendered. You can now access your module's (updated) dom objects. This notification is sent in response to a call to [`updateDom`](/module-development/core-module-file#this-updatedom-speed-options). |
 
-# Default module notifications
+## Default module notifications
 
 These notifications are sent by the default modules:
 
@@ -39,7 +39,7 @@ These notifications are sent by the default modules:
 | `ARTICLE_LESS_DETAILS` | _none_                                                                                                                | Hides the summary or full news article and only displays the news title of the currently viewed news item in [newsfeed module](https://github.com/MagicMirrorOrg/MagicMirror/tree/master/defaultmodules/newsfeed). |
 | `ARTICLE_TOGGLE_FULL`  | _none_                                                                                                                | Toggles article in fullscreen in [newsfeed module](https://github.com/MagicMirrorOrg/MagicMirror/tree/master/defaultmodules/newsfeed).                                                                             |
 
-# 3rd Party Module notifications
+## 3rd Party Module notifications
 
 Take a look in the [wiki](https://github.com/MagicMirrorOrg/MagicMirror/wiki/)
 to see if 3rd party modules send notifications you might want to use.
