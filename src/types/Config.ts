@@ -35,4 +35,5 @@ export type Config = {
   delight: DelightConfig
   sounds: SoundsConfig
   displayFormat: DisplayFormat
+  monetaryMode?: boolean
 }

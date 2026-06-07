@@ -16,7 +16,7 @@ export type BackendDeps = {
 }
 
 type TogglePayload = { childId: string, choreId: string };
-type RedeemPayload = { childId: string, pin: string };
+type RedeemPayload = { childId: string, pin: string, amount: number };
 
 export type Backend = {
   name?: string
