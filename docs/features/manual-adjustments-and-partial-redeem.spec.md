@@ -104,6 +104,8 @@ After a successful `ADJUST` or `REDEEM`, the modal closes and `pinModalState` is
 
 ### Amount reducer (new `src/frontend/amount.ts`)
 
+Exports `reduceAmount` (name mirrors `reducePin`), `parseAmount`, and `isMonetaryMode`.
+
 ```ts
 type AmountState = { input: string, error: string | null }
 type AmountAction =
@@ -317,17 +319,17 @@ adjust("alice", pin="1234", amount=5)
 ### Frontend amount reducer (`__tests__/unit/frontend/amount.test.ts`)
 
 ```ts
-reduce({input:"", error:null}, {type:"digit", digit:"1"})            -> {input:"1", error:null}
-reduce({input:"1", error:null}, {type:"digit", digit:"2"})           -> {input:"12", error:null}
-reduce({input:"12", error:null}, {type:"dot"})                        -> {input:"12.", error:null}
-reduce({input:"12.", error:null}, {type:"dot"})                       -> {input:"12.", error:null}    // second dot ignored
-reduce({input:"12.3", error:null}, {type:"digit", digit:"4"})         -> {input:"12.34", error:null}
-reduce({input:"12.34", error:null}, {type:"digit", digit:"5"})        -> {input:"12.34", error:null}  // 2dp cap
-reduce({input:"12345678", error:null}, {type:"digit", digit:"9"})     -> {input:"12345678", error:null} // 8 whole-digit cap
-reduce({input:"12", error:null}, {type:"back"})                       -> {input:"1", error:null}
-reduce({input:"", error:null}, {type:"back"})                         -> {input:"", error:null}
-reduce({input:"5", error:null}, {type:"set", value:"15.00"})          -> {input:"15.00", error:null}
-reduce({input:"5", error:null}, {type:"failed", reason:"insufficient"}) -> {input:"5", error:"Not enough points"}
+reduceAmount({input:"", error:null}, {type:"digit", digit:"1"})            -> {input:"1", error:null}
+reduceAmount({input:"1", error:null}, {type:"digit", digit:"2"})           -> {input:"12", error:null}
+reduceAmount({input:"12", error:null}, {type:"dot"})                        -> {input:"12.", error:null}
+reduceAmount({input:"12.", error:null}, {type:"dot"})                       -> {input:"12.", error:null}    // second dot ignored
+reduceAmount({input:"12.3", error:null}, {type:"digit", digit:"4"})         -> {input:"12.34", error:null}
+reduceAmount({input:"12.34", error:null}, {type:"digit", digit:"5"})        -> {input:"12.34", error:null}  // 2dp cap
+reduceAmount({input:"12345678", error:null}, {type:"digit", digit:"9"})     -> {input:"12345678", error:null} // 8 whole-digit cap
+reduceAmount({input:"12", error:null}, {type:"back"})                       -> {input:"1", error:null}
+reduceAmount({input:"", error:null}, {type:"back"})                         -> {input:"", error:null}
+reduceAmount({input:"5", error:null}, {type:"set", value:"15.00"})          -> {input:"15.00", error:null}
+reduceAmount({input:"5", error:null}, {type:"failed", reason:"insufficient"}) -> {input:"5", error:"Not enough points"}
 
 parseAmount({input:""})    -> 0
 parseAmount({input:"."})   -> 0
