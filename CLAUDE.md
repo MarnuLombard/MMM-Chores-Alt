@@ -191,6 +191,17 @@ One node_helper instance serves **all** instances of the module type.
 
 ---
 
+## Conventions
+
+- ***Never use TypeScript `as` manual casts unless absolutely necessary.***
+  Let the type system infer correctly. `as` silently suppresses real shape
+  mismatches (e.g. a local test `Spec` type with `as Spec` hid a payload
+  drift that should have been a compile error). When tempted to cast,
+  first try restructuring the value, using a type guard or `satisfies`,
+  or adjusting the function signature. Only use `as` for genuine
+  untyped-boundary interop (JSON parsing, `unknown` from external input)
+  and prefer a runtime check even then.
+
 ## Testing
 
 - Run via `npm test` (Vitest, `happy-dom` environment).
