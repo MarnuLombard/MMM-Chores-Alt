@@ -3,7 +3,9 @@ import { createBackend, type Backend, type BackendDeps } from "../../../src/back
 import { ChoresRepository } from "../../../src/backend/repository"
 import type { Config } from "../../../src/types/Config"
 
-type TestBackend = Backend & { sendSocketNotification: ReturnType<typeof vi.fn> }
+type TestBackend<P = unknown> = Backend & {
+  sendSocketNotification: ReturnType<typeof vi.fn<(notification: string, payload: P)=> void>>,
+}
 
 const baseConfig: Config = {
   parentPin: "1234",
@@ -22,7 +24,7 @@ const baseConfig: Config = {
   displayFormat: { prefix: "", suffix: "pts" },
 }
 
-function makeSpec(overrides?: Partial<BackendDeps>): TestBackend {
+function makeSpec<P>(overrides?: Partial<BackendDeps>): TestBackend<P> {
   const deps: BackendDeps = {
     repository: new ChoresRepository(":memory:"),
     cronSchedule: vi.fn((_expr: string, handler: () => void) => ({ stop: vi.fn(), handler })),
@@ -101,7 +103,7 @@ describe("Backend REDEEM (AC4, AC5, AC6)", () => {
 
   it("happy path writes redemption with amount=tally and broadcasts STATE with tally=0 (R15)", () => {
     const fixed = new Date(2026, 4, 9, 12, 0, 0)
-    const spec = makeSpec({ now: () => fixed })
+    const spec = makeSpec<{ children: Array<{ id: string, tally: number }> }>({ now: () => fixed })
     spec.handleInit(baseConfig)
     spec.handleToggle({ childId: "alice", choreId: "bed" })
     spec.handleToggle({ childId: "alice", choreId: "teeth" })
@@ -112,9 +114,70 @@ describe("Backend REDEEM (AC4, AC5, AC6)", () => {
     const calls = spec.sendSocketNotification.mock.calls
     const [notif, payload] = calls.at(-1)!
     expect(notif).toBe("STATE")
-    const alice = (payload as { children: Array<{ id: string, tally: number }> })
-      .children.find(c => c.id === "alice")!
+    const alice = payload.children.find(c => c.id === "alice")!
     expect(alice.tally).toBe(0)
+  })
+
+  it("partial redeem (amount < tally) writes amount and leaves residual tally (R2.4)", () => {
+    const fixed = new Date(2026, 4, 9, 12, 0, 0)
+    const spec = makeSpec<{ children: Array<{ id: string, tally: number }> }>({ now: () => fixed })
+    spec.handleInit(baseConfig)
+    spec.handleToggle({ childId: "alice", choreId: "bed" })
+    spec.handleToggle({ childId: "alice", choreId: "teeth" })
+    // tally now 3 (1 + 2)
+    spec.sendSocketNotification.mockClear()
+    spec.handleRedeem({ childId: "alice", pin: "1234", amount: 1 })
+    expect(spec.repository.getRedeemedTotal("alice")).toBe(1)
+    const calls = spec.sendSocketNotification.mock.calls
+    const [notif, payload] = calls.at(-1)!
+    expect(notif).toBe("STATE")
+    const alice = payload.children.find(c => c.id === "alice")!
+    expect(alice.tally).toBe(2)
+  })
+
+  it("partial redeem in monetary mode handles decimal amounts (Scenario: Bob)", () => {
+    const fixed = new Date(2026, 4, 9, 12, 0, 0)
+    const monetaryConfig: Config = {
+      ...baseConfig,
+      monetaryMode: true,
+      displayFormat: { prefix: "$", suffix: "" },
+      children: [
+        {
+          id: "bob",
+          name: "Bob",
+          chores: [{ id: "tidy", icon: "🧹", points: 1.5 }],
+        },
+      ],
+    }
+    const spec = makeSpec<{ children: Array<{ id: string, tally: number }> }>({ now: () => fixed })
+    spec.handleInit(monetaryConfig)
+    spec.handleToggle({ childId: "bob", choreId: "tidy" })
+    // tally now 1.5
+    spec.sendSocketNotification.mockClear()
+    spec.handleRedeem({ childId: "bob", pin: "1234", amount: 1.0 })
+    expect(spec.repository.getRedeemedTotal("bob")).toBe(1.0)
+    const calls = spec.sendSocketNotification.mock.calls
+    const [notif, payload] = calls.at(-1)!
+    expect(notif).toBe("STATE")
+    const bob = payload.children.find(c => c.id === "bob")!
+    expect(bob.tally).toBe(0.5)
+  })
+
+  it("amount > tally emits REDEEM_FAILED insufficient and writes nothing (R2.5)", () => {
+    const fixed = new Date(2026, 4, 9, 12, 0, 0)
+    const spec = makeSpec({ now: () => fixed })
+    spec.handleInit(baseConfig)
+    spec.handleToggle({ childId: "alice", choreId: "bed" })
+    spec.handleToggle({ childId: "alice", choreId: "teeth" })
+    // tally now 3
+    spec.sendSocketNotification.mockClear()
+    spec.handleRedeem({ childId: "alice", pin: "1234", amount: 5 })
+    expect(spec.sendSocketNotification).toHaveBeenCalledWith(
+      "REDEEM_FAILED",
+      { childId: "alice", reason: "insufficient" }
+    )
+    expect(spec.sendSocketNotification).not.toHaveBeenCalledWith("STATE", expect.anything())
+    expect(spec.repository.getRedeemedTotal("alice")).toBe(0)
   })
 })
 

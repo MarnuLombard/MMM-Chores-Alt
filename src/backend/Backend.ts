@@ -165,19 +165,28 @@ export function createBackend(deps: BackendDeps): Backend {
 
     handleRedeem(payload) {
       if (!this.config) return
-      const {childId, pin} = payload
+      const { childId, pin } = payload
       if (pin !== this.config.parentPin) {
-        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, {childId, reason: "wrong_pin"})
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "wrong_pin" })
         return
       }
       const all = this.repository.getAllCompletions()
       const redeemed = this.repository.getRedeemedTotal(childId)
       const tally = computeTally(childId, this.config.children, all, redeemed)
       if (tally <= 0) {
-        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, {childId, reason: "no_points"})
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "no_points" })
         return
       }
-      this.repository.insertRedemption(childId, tally, now().toISOString())
+      const amount = roundAmount(payload.amount)
+      if (!(amount > 0)) {
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "no_points" })
+        return
+      }
+      if (amount > tally) {
+        this.sendSocketNotification?.(SocketNotification.REDEEM_FAILED, { childId, reason: "insufficient" })
+        return
+      }
+      this.repository.insertRedemption(childId, amount, now().toISOString())
       this.sendState()
     },
 
