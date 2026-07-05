@@ -3,7 +3,7 @@
 *MMM-Chores-Alt* is a module for [MagicMirror²](https://github.com/MagicMirrorOrg/MagicMirror)
 that lets children track their daily chores on a touchscreen. Each child gets a panel
 with large tap buttons (supporting emoji or images for pre-reading-age children), a live
-point tally, and a parent-PIN-protected redemption flow.
+point tally, and a parent-PIN-protected flow for redeeming points or adding bonuses.
 
 ## Screenshots
 
@@ -86,8 +86,9 @@ Add the module to the `modules` array in `config/config.js`:
 | Option          | Type   | Default                          | Description                                              |
 |-----------------|--------|----------------------------------|----------------------------------------------------------|
 | `children`      | Array  | `[]`                             | List of child objects (see schema below)                 |
-| `parentPin`     | String | `"0000"`                         | PIN required to redeem a child's tally                   |
+| `parentPin`     | String | `"0000"`                         | PIN required to redeem or adjust a child's tally         |
 | `displayFormat` | Object | `{ prefix: "", suffix: "pts" }`  | Wraps the rendered tally (see Display format below)      |
+| `monetaryMode`  | Boolean| `false`                          | Adds a decimal key for fractional redeem/adjust amounts  |
 
 ### Display format
 
@@ -124,6 +125,9 @@ children: [{
 // renders "$1.50"
 ```
 
+To let parents enter fractional amounts when redeeming or adjusting, also set
+`monetaryMode: true` (see [Redeeming and adjusting tallies](#redeeming-and-adjusting-tallies)).
+
 ### Child object schema
 
 | Field    | Type   | Required | Description           |
@@ -141,6 +145,37 @@ children: [{
 | `icon`   | String | Yes      | Emoji string **or** image path/URL — paths containing `/` or `.` are rendered as `<img>` |
 | `label`  | String | No       | Text shown below the icon (omit if icon is self-explanatory)                             |
 | `points` | Number | Yes      | Points awarded on completion                                                             |
+
+## Redeeming and adjusting tallies
+
+Each child panel has two parent-PIN-protected buttons next to the tally:
+
+- **Redeem** - spend points. Enter the PIN, then an amount up to the current
+  tally (the field is pre-filled with the full tally). Partial redemptions are
+  supported, so a child can cash out some points and keep the rest. The button
+  is disabled when the tally is zero.
+- **`+` (adjust)** - add a bonus (allowance, gifts, one-off rewards). Enter the
+  PIN, then the amount to add. Adjustments raise the tally and, like earned
+  points, are preserved across the midnight reset.
+
+Both actions use the same two-phase modal: PIN entry first, then amount entry.
+The PIN is re-checked on the server for every redeem or adjust - entering it
+once does not grant a lasting session.
+
+### Monetary mode
+
+The amount keypad is integer-only by default. Set `monetaryMode: true` to add a
+decimal (`.`) key so parents can enter fractional amounts such as `1.50`. Pair it
+with a money-style `displayFormat` and fractional chore `points`:
+
+```js
+config: {
+  parentPin: "1234",
+  monetaryMode: true,
+  displayFormat: { prefix: "$", suffix: "" },
+  // ...children with fractional `points`
+}
+```
 
 ## Development
 
