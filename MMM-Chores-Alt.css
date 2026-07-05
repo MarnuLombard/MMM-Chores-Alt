@@ -135,6 +135,33 @@ img.chore-icon {
   background: rgba(255, 255, 255, 0.3);
 }
 
+.redeem-button[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+/* ── Adjust (+) button ──────────────────────────────────────────────────── */
+.adjust-button {
+  padding: 8px 16px;
+  min-width: 48px;
+  font-size: 22px;
+  font-weight: bold;
+  line-height: 1;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.adjust-button:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* ── PIN modal overlay ──────────────────────────────────────────────────── */
 .pin-overlay {
   position: fixed;
@@ -183,6 +210,35 @@ img.chore-icon {
   color: #ff4444;
   min-height: 28px;
   text-align: center;
+}
+
+/* ── Amount-entry phase ─────────────────────────────────────────────────── */
+.amount-display {
+  font-size: 48px;
+  font-weight: bold;
+  color: #fff;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.amount-available {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  margin-top: -8px;
+}
+
+.amount-error {
+  font-size: 20px;
+  color: #ff4444;
+  min-height: 28px;
+  text-align: center;
+}
+
+.pin-key-dot {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* ── PIN keypad ─────────────────────────────────────────────────────────── */
