@@ -134,7 +134,8 @@ are build artefacts - run `npm run build` after source changes.
 - **TypeScript** compiled by Vite to UMD (frontend) and CJS (backend); strict
   types from `src/types/`
 - **Vitest** + happy-dom for unit tests in `__tests__/unit/`
-- **better-sqlite3** - synchronous SQLite for the backend
+- **node:sqlite** (`DatabaseSync`) - Node's built-in synchronous SQLite
+  (Node 24+); no native build step
 - **node-cron** - midnight daily reset job
 - Frontend rendering via `getDom()`; no UI framework
 
@@ -214,13 +215,11 @@ One node_helper instance serves **all** instances of the module type.
 
 ## Build & Install
 
-- `npm install` triggers `postinstall` -> `@electron/rebuild` against
-  MagicMirror's pinned Electron. The script exits 0 with a warning when run
-  outside a MagicMirror parent (standalone clone for tests).
-- `.npmrc` sets `optional=true` so the lockfile lists all platform variants of
-  optional deps. Use `npm install`, not `npm ci --omit=optional`.
+- `npm install` needs no native rebuild: storage is Node's built-in
+  `node:sqlite`, so there is no `postinstall` and no `@electron/rebuild`.
+  The node_helper host must be Node 24+ (where `node:sqlite` is stable).
 - `npm run build` runs Vite twice: frontend (UMD, externalises `logger`) then
-  backend (CJS, externalises `better-sqlite3`, `node-cron`, `node_helper`,
+  backend (CJS, externalises `node:sqlite`, `node-cron`, `node_helper`,
   `logger`, `path`, `fs`).
 
 ## Full SDK Reference

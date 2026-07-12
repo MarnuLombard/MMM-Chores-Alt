@@ -26,9 +26,10 @@ cd MMM-Chores-Alt
 npm install
 ```
 
-The `postinstall` hook runs `@electron/rebuild` against MagicMirror's pinned
-Electron version so `better-sqlite3` works on the host. Use `npm install` (not
-`npm ci --omit=optional`) to allow native rebuilds on each target platform.
+Storage uses Node's built-in `node:sqlite` module, so there is no native
+module to compile and no `@electron/rebuild` step. The host running the
+MagicMirror server (node_helper) must be **Node 24+**, where `node:sqlite`
+is stable.
 
 ### Update
 

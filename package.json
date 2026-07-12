@@ -1,8 +1,11 @@
 {
   "name": "mmm-chores-alt",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MagicMirror² module for tracking children's daily chores",
   "main": "MMM-Chores-Alt.js",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "build:frontend": "vite build --config vite.config.frontend.ts",
     "build:backend": "vite build --config vite.config.backend.ts",
@@ -11,8 +14,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "postinstall": "./postinstall"
+    "test:watch": "vitest"
   },
   "repository": {
     "type": "git",
@@ -23,15 +25,13 @@
     "chores",
     "kids"
   ],
-  "author": "[Author]",
+  "author": "Marnu Lombard",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/MarnuLombard/MMM-Chores-Alt/issues"
   },
   "homepage": "https://github.com/MarnuLombard/MMM-Chores-Alt#readme",
   "dependencies": {
-    "@electron/rebuild": "^4.0.4",
-    "better-sqlite3": "^12.6.2",
     "node-cron": "^3.0.0"
   },
   "devDependencies": {
@@ -39,7 +39,6 @@
     "@eslint/js": "^9.30.1",
     "@eslint/markdown": "^6.6.0",
     "@stylistic/eslint-plugin": "^5.1.0",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/magicmirror-module": "^2.16.6",
     "@types/node": "^22.10.0",
     "@types/node-cron": "^3.0.11",

@@ -14,11 +14,8 @@ USER node
 
 WORKDIR /opt/magic_mirror/modules/MMM-Chores-Alt
 COPY --chown=node:node package.json ./
-# Strip the module's own postinstall (which targets Electron, wrong for
-# this server-mode container) but allow other packages' install scripts
-# to run so better-sqlite3's prebuild-install fetches a binary matching
-# the container's Node ABI.
-RUN node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));delete p.scripts.postinstall;fs.writeFileSync('package.json',JSON.stringify(p,null,2))" \
- && npm install --omit=dev --no-package-lock
+# node:sqlite is built into Node, so there are no native modules to
+# compile or rebuild - a plain production install is all the runtime needs.
+RUN npm install --omit=dev --no-package-lock
 
 WORKDIR /opt/magic_mirror

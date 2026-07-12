@@ -11,12 +11,12 @@ export default defineConfig({
     emptyOutDir: false,
     sourcemap: true,
     minify: "terser",
-    target: "node20",
+    target: "node24",
     rollupOptions: {
       external: [
         "node_helper",
         "logger",
-        "better-sqlite3",
+        "node:sqlite",
         "node-cron",
         "node:path",
         "path",

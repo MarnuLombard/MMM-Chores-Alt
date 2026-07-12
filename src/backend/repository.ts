@@ -1,21 +1,21 @@
-import Database from "better-sqlite3"
+import { DatabaseSync, type StatementSync } from "node:sqlite"
 
 type Stmts = {
-  insertCompletion: Database.Statement
-  deleteCompletion: Database.Statement
-  getCompletionsForDay: Database.Statement
-  getAllCompletions: Database.Statement
-  insertRedemption: Database.Statement
-  getRedeemedTotal: Database.Statement
+  insertCompletion: StatementSync
+  deleteCompletion: StatementSync
+  getCompletionsForDay: StatementSync
+  getAllCompletions: StatementSync
+  insertRedemption: StatementSync
+  getRedeemedTotal: StatementSync
 }
 
 export class ChoresRepository {
-  private db: Database.Database
+  private db: DatabaseSync
   private stmts: Stmts
 
   constructor(dbPath: string) {
-    this.db = new Database(dbPath)
-    this.db.pragma("journal_mode = WAL")
+    this.db = new DatabaseSync(dbPath)
+    this.db.exec("PRAGMA journal_mode = WAL")
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS completions (
         date     TEXT NOT NULL,
@@ -55,16 +55,16 @@ export class ChoresRepository {
   }
 
   isOpen(): boolean {
-    return this.db.open
+    return this.db.isOpen
   }
 
   close(): void {
-    if (this.db.open) this.db.close()
+    if (this.db.isOpen) this.db.close()
   }
 
   insertCompletion(date: string, childId: string, choreId: string): boolean {
     const result = this.stmts.insertCompletion.run(date, childId, choreId)
-    return result.changes > 0
+    return Number(result.changes) > 0
   }
 
   deleteCompletion(date: string, childId: string, choreId: string): void {
@@ -72,13 +72,17 @@ export class ChoresRepository {
   }
 
   getCompletionsForDay(date: string, childId: string): string[] {
-    const rows = this.stmts.getCompletionsForDay.all(date, childId) as { chore_id: string }[]
-    return rows.map(r => r.chore_id)
+    const rows = this.stmts.getCompletionsForDay.all(date, childId)
+    return rows.map(r => String(r.chore_id))
   }
 
   getAllCompletions(): { childId: string, choreId: string, count: number }[] {
-    const rows = this.stmts.getAllCompletions.all() as { child_id: string, chore_id: string, cnt: number }[]
-    return rows.map(r => ({ childId: r.child_id, choreId: r.chore_id, count: r.cnt }))
+    const rows = this.stmts.getAllCompletions.all()
+    return rows.map(r => ({
+      childId: String(r.child_id),
+      choreId: String(r.chore_id),
+      count: Number(r.cnt),
+    }))
   }
 
   // Signed-amount convention: positive amount = redemption (lowers tally),
@@ -90,7 +94,7 @@ export class ChoresRepository {
   }
 
   getRedeemedTotal(childId: string): number {
-    const row = this.stmts.getRedeemedTotal.get(childId) as { total: number }
-    return row.total
+    const row = this.stmts.getRedeemedTotal.get(childId)
+    return Number(row?.total ?? 0)
   }
 }
