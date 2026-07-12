@@ -80,7 +80,7 @@ function isAdjustPayload(p: unknown): p is AdjustPayload {
 
 export function createBackend(deps: BackendDeps): Backend {
   const now = deps.now ?? (() => new Date())
-  const cronSchedule = deps.cronSchedule ?? ((expr, handler) => cron.schedule(expr, handler) as unknown as CronHandle)
+  const cronSchedule = deps.cronSchedule ?? ((expr, handler) => cron.schedule(expr, handler))
 
   return {
     path: "",
