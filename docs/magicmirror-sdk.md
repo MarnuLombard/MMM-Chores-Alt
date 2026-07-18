@@ -5,10 +5,18 @@ SDK knowledge. It points to the canonical extracted docs in
 [`magicmirror-sdk/`](./magicmirror-sdk/) and summarises the parts that matter for
 this codebase.
 
-The raw markdown under `magicmirror-sdk/` was fetched verbatim from
+The raw markdown under `magicmirror-sdk/` was fetched from
 [`MagicMirrorOrg/MagicMirror-Documentation`](https://github.com/MagicMirrorOrg/MagicMirror-Documentation/tree/master/module-development)
-on 2026-05-14. It is the canonical, current source. Live rendered version:
+on 2026-05-14 and re-checked against upstream on 2026-07-18. Content is current:
+the module-development pages have been stable since the v2.35.0 docs update
+(2026-04-01), with the only later change being `weather-provider.md` (not
+mirrored). Local copies carry cosmetic normalizations (absolute anchor links,
+heading levels) that deviate from upstream on purpose - do not "fix" them by
+re-fetching blindly. Live rendered version:
 <https://docs.magicmirror.builders/module-development/>.
+
+The behaviours that *did* move between MM releases live in core, not in these
+pages - see "Recent core changes" below.
 
 When a fact in this file disagrees with the raw extracted files, trust the raw
 files. When the raw files disagree with the upstream site, re-fetch.
@@ -128,7 +136,10 @@ Helper `this`: `name`, `path`, `expressApp`, `io`.
 ### `updateDom` options (v2.25.0+)
 
 ```js
-this.updateDom({ speed: 1000, animate: { in: "backInDown", out: "backOutUp" } });
+// The animate options MUST be nested under `options` - core reads
+// updateOptions.options.speed. A flat { speed, animate } is silently
+// treated as "no speed" (speed 0, no animation).
+this.updateDom({ options: { speed: 1000, animate: { in: "backInDown", out: "backOutUp" } } });
 ```
 
 ### `MM.getModules()` chain
@@ -236,6 +247,55 @@ async resource registration.
 Upstream docs flag this in their general advice - lets debugging tooling
 override `Date.now`. Not a hard rule for this project, but if you write new
 date-handling code, follow it.
+
+### 11. `Module` and `NodeHelper` are ES6 classes as of v2.37.0
+
+The core rewrote `Module` (#4151) and `NodeHelper` (#4147) as ES6 classes and
+switched browser core to ES module imports (#4158). The **public API is
+unchanged**: you still call `Module.register("Name", {...})` and
+`NodeHelper.create({...})` with plain object literals, and `this` inside your
+methods still points at the instance. Don't convert this module's factories to
+`class extends` - the register/create pattern is still the supported surface.
+
+### 12. `updateDom` animation options must be nested under `options`
+
+Core reads `updateOptions.options.speed` (see `js/main.js` `_updateDom` and
+`core-module-file.md`). Calling `this.updateDom({ speed, animate })` flat is
+silently treated as "no speed" - it logs `... Has no speed in object`, sets
+speed 0, and skips the animation. Use `this.updateDom({ options: { speed,
+animate } })`, or pass a bare number (`this.updateDom(1000)`), or no argument
+for an instant update. This project's `src/frontend/Frontend.ts` calls
+`updateDom()` with no argument, so it is unaffected - but keep the nested form
+in mind if you ever add animation.
+
+### 13. Config secrets are redacted in socket payloads (v2.35.0 / v2.37.0)
+
+v2.35.0 added env-var substitution and secret redaction to `config.js` loading;
+v2.37.0 hardened it to "prevent unauthorized secret expansion in socket
+payloads" (#4184). The config object the frontend forwards to the helper via
+`INIT` may have secret-shaped values redacted. If a config field ever carries a
+credential (e.g. a PIN pepper or API token), don't assume the raw secret
+survives the INIT round-trip - resolve it in the helper, not by shipping it
+through the socket.
+
+---
+
+## Recent core changes (v2.34.0 - v2.37.0)
+
+None of these changed the mirrored module-development doc pages, but they change
+how the host behaves around a module. This module does no network I/O (only
+dependency: `node-cron`), so the fetch/CORS items below are informational only.
+
+| Release | Date | Module-relevant change |
+|---|---|---|
+| v2.34.0 | 2026-01-01 | Core test stack migrated **Jest -> Vitest** (#3940) and e2e **-> Playwright**; `XMLHttpRequest` replaced with `fetch` (#3950). |
+| v2.35.0 | 2026-04-01 | **Breaking.** Default modules moved `/modules/default` -> **`/defaultmodules`** (#4019) - upstream source links use the new path. `custom.css` moved from `css/` into `config/` (#4020). **`kioskmode` removed** (#4027). `config.js` gained env-var substitution + secret protection (#4029). Default start scripts switched **X11 -> Wayland** (#4011). |
+| v2.36.0 | 2026-04-30 | **Breaking.** CORS proxy **disabled by default** + SSRF hardening (irrelevant here - no remote fetching). `ipWhitelist` tightening began; public instances must sit behind an authenticating reverse proxy. |
+| v2.37.0 | 2026-07-01 | `Module` and `NodeHelper` rewritten as **ES6 classes** (#4151, #4147); browser core uses ES module imports (#4158). `_updateDom` flow modernized to async/await (#4185/#4186); it reads `options.speed` (see gotcha 12). `electronSwitches` can now be object-based (#4161). `ipWhitelist` now enforced on Socket.IO too (#4169). Secret-expansion hardening on socket payloads (#4184). |
+
+**Node version floor** has climbed across these releases; v2.37.0 needs
+`>=22.22.2 <23 || >=24` (Node 23 is explicitly excluded). This repo's
+`engines` already pins `>=24.0.0`, so it clears the floor.
 
 ---
 
