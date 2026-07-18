@@ -222,6 +222,43 @@ One node_helper instance serves **all** instances of the module type.
   backend (CJS, externalises `node:sqlite`, `node-cron`, `node_helper`,
   `logger`, `path`, `fs`).
 
+## Docker smoke-test harness
+
+`docker/` + `compose.yaml` run the module inside a real MagicMirror instance for
+local end-to-end testing. Not a production artefact - it exists to see the built
+module render and to exercise the SQLite/cron paths against a live MM.
+
+```bash
+npm run build                        # produce artefacts on the host first
+docker compose up --build            # start MM; browse to http://localhost:8081
+```
+
+How the pieces fit:
+
+- **`docker/Dockerfile`** builds on `karsten13/magicmirror:latest`. It creates
+  the module dir, copies only `package.json`, and runs `npm install --omit=dev`.
+  Because storage is built-in `node:sqlite`, there are no native modules to
+  compile - `node_modules` bakes into an image layer and never touches the host.
+- **`compose.yaml`** (repo root) defines the single `magicmirror` service: builds
+  from `docker/Dockerfile`, maps host `8081` → container `8080`, sets `TZ=UTC`
+  and `MM_SCENARIO=server` (serve-only, view in a host browser rather than
+  Electron).
+- **Named volume `module_dir`** holds the whole module dir, seeded from the image
+  so the baked `node_modules` is present. The runtime `chores.db` lives here too,
+  so the DB (tally, completions, redemptions) persists across container restarts.
+- **Bind mounts** overlay the committed artefacts (`MMM-Chores-Alt.js` + `.map`,
+  `node_helper.js` + `.map`, `.css`) and `package.json` onto that volume, so a
+  host-side `npm run build` is picked up on container restart with no image
+  rebuild. There is no `templates/` mount - this module renders via `getDom`.
+- **`docker/config/`** is mounted to `/opt/magic_mirror/config`: `config.js`
+  loads the module `fullscreen_below` with two children and a `€` `displayFormat`;
+  `basepath.js` sets `basePath: "/"`; `custom.css` is an empty override hook.
+
+Iteration loop: edit source → `npm run build` on the host → `docker compose
+restart` (or reload the browser) to pick up the new bundle. Rebuild the image
+(`--build`) only when `package.json` deps change. To reset the tally DB, remove
+the `module_dir` volume (`docker compose down -v`).
+
 ## Full SDK Reference
 
 See [`docs/magicmirror-sdk.md`](docs/magicmirror-sdk.md) for:
