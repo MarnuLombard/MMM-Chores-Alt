@@ -12,7 +12,7 @@ export default defineConfig({
     sourcemap: true,
     minify: "terser",
     target: "node24",
-    rollupOptions: {
+    rolldownOptions: {
       external: [
         "node_helper",
         "logger",

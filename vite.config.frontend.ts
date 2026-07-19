@@ -12,7 +12,7 @@ export default defineConfig({
     emptyOutDir: false,
     sourcemap: true,
     minify: "terser",
-    rollupOptions: {
+    rolldownOptions: {
       external: ["logger"],
       output: {
         globals: { logger: "Log" },
