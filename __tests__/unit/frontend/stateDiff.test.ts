@@ -27,6 +27,11 @@ function buildDom(state: StatePayload): HTMLElement {
     tally.className = "child-tally"
     tally.textContent = `${child.tally}pts`
     section.appendChild(tally)
+    const redeem = document.createElement("button")
+    redeem.className = "redeem-button"
+    redeem.textContent = "Redeem"
+    if (child.tally <= 0) redeem.setAttribute("disabled", "")
+    section.appendChild(redeem)
     root.appendChild(section)
   }
   document.body.appendChild(root)
@@ -131,6 +136,32 @@ describe("applyStateDiff (R33, R34)", () => {
     const btn = root.querySelector(".chore-button[data-chore-id='bed']")!
     expect(btn.classList.contains("done")).toBe(false)
     expect(btn.querySelector(".chore-done-badge")).toBeNull()
+  })
+
+  it("enables the redeem button when tally rises above zero", () => {
+    const prev: StatePayload = { children: [{ id: "alice", name: "A", tally: 0, chores: [
+      { id: "bed", icon: "x", points: 1, done: false },
+    ] }] }
+    const root = buildDom(prev)
+    expect(root.querySelector(".redeem-button")!.hasAttribute("disabled")).toBe(true)
+    const next: StatePayload = { children: [{ id: "alice", name: "A", tally: 1, chores: [
+      { id: "bed", icon: "x", points: 1, done: true },
+    ] }] }
+    applyStateDiff(root, next, ptsFormat)
+    expect(root.querySelector(".redeem-button")!.hasAttribute("disabled")).toBe(false)
+  })
+
+  it("disables the redeem button when tally falls to zero", () => {
+    const prev: StatePayload = { children: [{ id: "alice", name: "A", tally: 1, chores: [
+      { id: "bed", icon: "x", points: 1, done: true },
+    ] }] }
+    const root = buildDom(prev)
+    expect(root.querySelector(".redeem-button")!.hasAttribute("disabled")).toBe(false)
+    const next: StatePayload = { children: [{ id: "alice", name: "A", tally: 0, chores: [
+      { id: "bed", icon: "x", points: 1, done: false },
+    ] }] }
+    applyStateDiff(root, next, ptsFormat)
+    expect(root.querySelector(".redeem-button")!.hasAttribute("disabled")).toBe(true)
   })
 
   it("returns false when expected child-section is missing (R34)", () => {

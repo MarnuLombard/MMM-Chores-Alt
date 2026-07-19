@@ -47,6 +47,12 @@ export function applyStateDiff(root: Element, next: StatePayload, format: Displa
 
     const tallyEl = section.querySelector(".child-tally")
     if (tallyEl) tallyEl.textContent = formatTally(child.tally, format)
+
+    const redeemBtn = section.querySelector(".redeem-button")
+    if (redeemBtn) {
+      if (child.tally <= 0) redeemBtn.setAttribute("disabled", "")
+      else redeemBtn.removeAttribute("disabled")
+    }
   }
   return true
 }
