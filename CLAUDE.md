@@ -222,6 +222,21 @@ One node_helper instance serves **all** instances of the module type.
   backend (CJS, externalises `node:sqlite`, `node-cron`, `node_helper`,
   `logger`, `path`, `fs`).
 
+### Intentional dependency version holds
+
+Build/lint/test tooling tracks latest; these are pinned back on purpose.
+Revisit when the blocking condition clears.
+
+- **typescript `^5.9`** (latest is 7.x): `typescript-eslint` peer-caps TS at
+  `<6.1.0` and hard-crashes on TS 7 (no compiler API until TS 7.1). The build
+  never runs `tsc` for emit (Vite/Oxc strips types), so TS 7 buys nothing here.
+  Revisit when typescript-eslint ships TS 7.1 support.
+- **@types/node `^24`** (latest is 26.x): types must match the runtime Node.
+  MagicMirror's floor is Node 22.21/24 and this repo's `engines` is `>=24`, so
+  type 26 would surface APIs absent at runtime. Bump only when the Node floor does.
+- **node-cron `^4`**: already latest 4.x and Node-24 compatible. MagicMirror
+  itself uses `croner`; migrating to it is optional and out of scope.
+
 ## Docker smoke-test harness
 
 `docker/` + `compose.yaml` run the module inside a real MagicMirror instance for

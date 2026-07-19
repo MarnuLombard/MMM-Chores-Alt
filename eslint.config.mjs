@@ -15,6 +15,7 @@ export default defineConfig([
       "node_helper.js",
       "node_helper.js.map",
       "node_modules/**",
+      "docker/config/basepath.js",
     ],
   },
   {
